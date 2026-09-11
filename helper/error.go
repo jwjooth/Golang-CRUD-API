@@ -8,5 +8,8 @@ type BaseErrorResponse struct {
 }
 
 func (b *BaseErrorResponse) Error() string {
+	if b == nil {
+		return "unknown error"
+	}
 	return b.Message
 }
