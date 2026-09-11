@@ -3,6 +3,7 @@ module golang-restful-api
 go 1.26.5
 
 require (
+	github.com/go-chi/chi/v5 v5.3.2
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.2
 )
