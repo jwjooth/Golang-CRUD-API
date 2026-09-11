@@ -1,4 +1,4 @@
-# golang-restful-api
+# Product CRUD API
 
 Clean-architecture Product CRUD API built with Go, Chi, and GORM (MySQL).
 
