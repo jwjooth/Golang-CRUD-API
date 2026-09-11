@@ -2,128 +2,87 @@ package repository
 
 import (
 	"context"
+	"errors"
+
 	"golang-restful-api/entities"
-	"golang-restful-api/helper"
-	"golang-restful-api/payload"
-	"net/http"
 
 	"gorm.io/gorm"
 )
 
+// ErrNotFound is returned when a product row does not exist.
+var ErrNotFound = errors.New("product not found")
+
+// ProductRepository is a pure persistence boundary: entities in, entities out.
+// No DTOs, no HTTP codes, no validation here.
 type ProductRepository interface {
-	CreateProduct(ctx context.Context, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse)
-	GetAllProduct(ctx context.Context) ([]payload.ProductResponse, *helper.BaseErrorResponse)
-	UpdateProduct(ctx context.Context, id int, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse)
-	DeleteProduct(ctx context.Context, id int) (bool, *helper.BaseErrorResponse)
+	Create(ctx context.Context, product *entities.ProductEntity) (*entities.ProductEntity, error)
+	FindAll(ctx context.Context, limit, offset int) ([]entities.ProductEntity, int64, error)
+	FindByID(ctx context.Context, id uint) (*entities.ProductEntity, error)
+	Update(ctx context.Context, product *entities.ProductEntity) (*entities.ProductEntity, error)
+	Delete(ctx context.Context, id uint) error
 }
 
-type ProductRepositoryImpl struct {
+type productRepository struct {
 	db *gorm.DB
 }
 
+// NewProductRepositoryImpl constructs a ProductRepository backed by GORM.
 func NewProductRepositoryImpl(db *gorm.DB) ProductRepository {
-	return &ProductRepositoryImpl{
-		db: db,
-	}
+	return &productRepository{db: db}
 }
 
-func (p *ProductRepositoryImpl) CreateProduct(ctx context.Context, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse) {
-	if request.Name == "" {
-		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "name is required")
+func (r *productRepository) Create(ctx context.Context, product *entities.ProductEntity) (*entities.ProductEntity, error) {
+	if err := r.db.WithContext(ctx).Create(product).Error; err != nil {
+		return nil, err
 	}
-	if request.Price < 0 {
-		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "price cant be less than zero")
-	}
-	if request.Price == 0 {
-		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "price is required")
-	}
-	if request.Stock < 0 {
-		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "stock cant be less than zero")
-	}
-	if request.Stock == 0 {
-		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "stock is required")
-	}
-
-	product := entities.ProductEntity{
-		Name:        request.Name,
-		Description: request.Description,
-		Price:       request.Price,
-		Stock:       request.Stock,
-	}
-
-	if err := p.db.WithContext(ctx).Create(&product).Error; err != nil {
-		return payload.ProductResponse{}, errorHelper(http.StatusInternalServerError, "failed to create product")
-	}
-
-	return toResponse(product), nil
+	return product, nil
 }
 
-func (p *ProductRepositoryImpl) GetAllProduct(ctx context.Context) ([]payload.ProductResponse, *helper.BaseErrorResponse) {
+func (r *productRepository) FindAll(ctx context.Context, limit, offset int) ([]entities.ProductEntity, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&entities.ProductEntity{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	var records []entities.ProductEntity
-	if dbErr := p.db.WithContext(ctx).Find(&records).Error; dbErr != nil {
-		return nil, errorHelper(http.StatusInternalServerError, "failed to fetch products")
+	q := r.db.WithContext(ctx).Order("id ASC")
+	if limit > 0 {
+		q = q.Limit(limit)
 	}
-
-	return toResponses(records), nil
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	if err := q.Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+	return records, total, nil
 }
 
-func (p *ProductRepositoryImpl) UpdateProduct(ctx context.Context, id int, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse) {
-	updates := make(map[string]any)
-
-	if request.Name != "" {
-		updates["name"] = request.Name
+func (r *productRepository) FindByID(ctx context.Context, id uint) (*entities.ProductEntity, error) {
+	var product entities.ProductEntity
+	if err := r.db.WithContext(ctx).First(&product, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
 	}
-	if request.Price != 0 {
-		updates["price"] = request.Price
-	}
-	if request.Stock != 0 {
-		updates["stock"] = request.Stock
-	}
-
-	if dbErr := p.db.WithContext(ctx).Model(&entities.ProductEntity{}).Where("id = ?", id).Updates(updates).Error; dbErr != nil {
-		return payload.ProductResponse{}, errorHelper(http.StatusInternalServerError, "failed to update product data")
-	}
-
-	var updated entities.ProductEntity
-	if err := p.db.WithContext(ctx).First(&updated, id).Error; err != nil {
-		return payload.ProductResponse{}, errorHelper(http.StatusInternalServerError, "failed to fetch updated product")
-	}
-
-	return toResponse(updated), nil
+	return &product, nil
 }
 
-func (p *ProductRepositoryImpl) DeleteProduct(ctx context.Context, id int) (bool, *helper.BaseErrorResponse) {
-	if err := p.db.WithContext(ctx).Delete(&entities.ProductEntity{}, id).Error; err != nil {
-		return false, errorHelper(http.StatusInternalServerError, "failed to delete product data")
+func (r *productRepository) Update(ctx context.Context, product *entities.ProductEntity) (*entities.ProductEntity, error) {
+	if err := r.db.WithContext(ctx).Save(product).Error; err != nil {
+		return nil, err
 	}
-
-	return true, nil
+	return product, nil
 }
 
-func errorHelper(statusCode int, message string) *helper.BaseErrorResponse {
-	return &helper.BaseErrorResponse{
-		StatusCode: statusCode,
-		Message:    message,
-		Data:       nil,
+func (r *productRepository) Delete(ctx context.Context, id uint) error {
+	res := r.db.WithContext(ctx).Delete(&entities.ProductEntity{}, id)
+	if res.Error != nil {
+		return res.Error
 	}
-}
-
-func toResponse(product entities.ProductEntity) payload.ProductResponse {
-	return payload.ProductResponse{
-		Id:          product.Id,
-		Name:        product.Name,
-		Description: product.Description,
-		Price:       product.Price,
-		Stock:       product.Stock,
-		CreatedAt:   product.CreatedAt,
-		UpdatedAt:   product.UpdatedAt,
+	if res.RowsAffected == 0 {
+		return ErrNotFound
 	}
-}
-
-func toResponses(products []entities.ProductEntity) []payload.ProductResponse {
-	resp := make([]payload.ProductResponse, len(products))
-	for i, p := range products {
-		resp[i] = toResponse(p)
-	}
-	return resp
+	return nil
 }

@@ -2,60 +2,153 @@ package service
 
 import (
 	"context"
+	"errors"
+
+	"golang-restful-api/entities"
 	"golang-restful-api/helper"
 	"golang-restful-api/payload"
 	"golang-restful-api/repository"
 
-	"gorm.io/gorm"
+	"github.com/go-playground/validator/v10"
 )
 
+// ProductService holds business logic + validation and maps entities to DTOs.
 type ProductService interface {
-	GetAllProduct(ctx context.Context) ([]payload.ProductResponse, *helper.BaseErrorResponse)
-	CreateProduct(ctx context.Context, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse)
-	UpdateProduct(ctx context.Context, request payload.ProductRequest, id int) (payload.ProductResponse, *helper.BaseErrorResponse)
-	DeleteProduct(ctx context.Context, id int) (bool, *helper.BaseErrorResponse)
+	List(ctx context.Context, page, perPage int) ([]payload.ProductResponse, int64, *helper.AppError)
+	GetByID(ctx context.Context, id uint) (payload.ProductResponse, *helper.AppError)
+	Create(ctx context.Context, req payload.CreateProductRequest) (payload.ProductResponse, *helper.AppError)
+	Update(ctx context.Context, id uint, req payload.UpdateProductRequest) (payload.ProductResponse, *helper.AppError)
+	Delete(ctx context.Context, id uint) *helper.AppError
 }
 
-type ProductServiceImpl struct {
-	db   *gorm.DB
-	repo repository.ProductRepository
+type productService struct {
+	repo     repository.ProductRepository
+	validate *validator.Validate
 }
 
-func NewProductServiceImpl(db *gorm.DB, repository repository.ProductRepository) ProductService {
-	return &ProductServiceImpl{
-		db:   db,
-		repo: repository,
+// NewProductServiceImpl constructs a ProductService. It no longer needs *gorm.DB:
+// transactions can be added later via a Tx-aware repository if required.
+func NewProductServiceImpl(repo repository.ProductRepository) ProductService {
+	return &productService{repo: repo, validate: validator.New()}
+}
+
+// NewProductServiceImplWithDB keeps backward compatibility with the old
+// constructor signature (db was unused). Prefer NewProductServiceImpl.
+func NewProductServiceImplWithDB(_ any, repo repository.ProductRepository) ProductService {
+	return NewProductServiceImpl(repo)
+}
+
+func (s *productService) List(ctx context.Context, page, perPage int) ([]payload.ProductResponse, int64, *helper.AppError) {
+	if page < 1 {
+		page = 1
 	}
-}
+	if perPage < 1 {
+		perPage = 10
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	offset := (page - 1) * perPage
 
-func (p *ProductServiceImpl) GetAllProduct(ctx context.Context) ([]payload.ProductResponse, *helper.BaseErrorResponse) {
-	result, err := p.repo.GetAllProduct(ctx)
+	records, total, err := s.repo.FindAll(ctx, perPage, offset)
 	if err != nil {
-		return result, err
+		return nil, 0, helper.Internal("failed to fetch products", err)
 	}
-	return result, nil
+	return payload.NewProductResponses(records), total, nil
 }
 
-func (p *ProductServiceImpl) CreateProduct(ctx context.Context, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse) {
-	result, err := p.repo.CreateProduct(ctx, request)
-	if err != nil {
-		return result, err
+func (s *productService) GetByID(ctx context.Context, id uint) (payload.ProductResponse, *helper.AppError) {
+	if id == 0 {
+		return payload.ProductResponse{}, helper.BadRequest("invalid product id")
 	}
-	return result, nil
+	product, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return payload.ProductResponse{}, helper.NotFound("product not found")
+		}
+		return payload.ProductResponse{}, helper.Internal("failed to fetch product", err)
+	}
+	return payload.NewProductResponse(*product), nil
 }
 
-func (p *ProductServiceImpl) UpdateProduct(ctx context.Context, request payload.ProductRequest, id int) (payload.ProductResponse, *helper.BaseErrorResponse) {
-	result, err := p.repo.UpdateProduct(ctx, id, request)
-	if err != nil {
-		return result, err
+func (s *productService) Create(ctx context.Context, req payload.CreateProductRequest) (payload.ProductResponse, *helper.AppError) {
+	if err := s.validate.Struct(req); err != nil {
+		return payload.ProductResponse{}, helper.BadRequest(formatValidationError(err))
 	}
-	return result, nil
+
+	product := &entities.ProductEntity{
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       req.Price,
+		Stock:       req.Stock,
+	}
+	created, err := s.repo.Create(ctx, product)
+	if err != nil {
+		return payload.ProductResponse{}, helper.Internal("failed to create product", err)
+	}
+	return payload.NewProductResponse(*created), nil
 }
 
-func (p *ProductServiceImpl) DeleteProduct(ctx context.Context, id int) (bool, *helper.BaseErrorResponse) {
-	result, err := p.repo.DeleteProduct(ctx, id)
-	if err != nil {
-		return false, err
+func (s *productService) Update(ctx context.Context, id uint, req payload.UpdateProductRequest) (payload.ProductResponse, *helper.AppError) {
+	if id == 0 {
+		return payload.ProductResponse{}, helper.BadRequest("invalid product id")
 	}
-	return result, nil
+	if err := s.validate.Struct(req); err != nil {
+		return payload.ProductResponse{}, helper.BadRequest(formatValidationError(err))
+	}
+
+	existing, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return payload.ProductResponse{}, helper.NotFound("product not found")
+		}
+		return payload.ProductResponse{}, helper.Internal("failed to fetch product", err)
+	}
+
+	existing.Name = req.Name
+	existing.Description = req.Description
+	existing.Price = req.Price
+	existing.Stock = req.Stock
+
+	updated, err := s.repo.Update(ctx, existing)
+	if err != nil {
+		return payload.ProductResponse{}, helper.Internal("failed to update product", err)
+	}
+	return payload.NewProductResponse(*updated), nil
+}
+
+func (s *productService) Delete(ctx context.Context, id uint) *helper.AppError {
+	if id == 0 {
+		return helper.BadRequest("invalid product id")
+	}
+	if err := s.repo.Delete(ctx, id); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return helper.NotFound("product not found")
+		}
+		return helper.Internal("failed to delete product", err)
+	}
+	return nil
+}
+
+func formatValidationError(err error) string {
+	var verrs validator.ValidationErrors
+	if errors.As(err, &verrs) {
+		for _, fe := range verrs {
+			switch fe.Tag() {
+			case "required":
+				return fe.Field() + " is required"
+			case "gt":
+				return fe.Field() + " must be greater than " + fe.Param()
+			case "gte":
+				return fe.Field() + " must be greater than or equal to " + fe.Param()
+			case "max":
+				return fe.Field() + " must be at most " + fe.Param() + " characters"
+			case "min":
+				return fe.Field() + " must be at least " + fe.Param() + " characters"
+			default:
+				return fe.Field() + " is invalid"
+			}
+		}
+	}
+	return "invalid request body"
 }

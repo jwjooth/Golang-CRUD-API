@@ -2,167 +2,135 @@ package controller
 
 import (
 	"encoding/json"
+	"net/http"
+	"strconv"
+
 	"golang-restful-api/helper"
 	"golang-restful-api/payload"
 	"golang-restful-api/service"
-	"log"
-	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type ProductControllerImpl struct {
-	ProductService service.ProductService
-}
-
-func NewProductController(service service.ProductService) *ProductControllerImpl {
-	return &ProductControllerImpl{
-		ProductService: service,
-	}
-}
-
+// ProductController is the HTTP boundary: decode → service → encode.
+// No business logic or SQL here.
 type ProductController interface {
-	GetAllProduct(w http.ResponseWriter, r *http.Request)
+	ListProducts(w http.ResponseWriter, r *http.Request)
+	GetProductByID(w http.ResponseWriter, r *http.Request)
 	CreateProduct(w http.ResponseWriter, r *http.Request)
 	UpdateProduct(w http.ResponseWriter, r *http.Request)
 	DeleteProduct(w http.ResponseWriter, r *http.Request)
 }
 
-func (p *ProductControllerImpl) GetAllProduct(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	result, appErr := p.ProductService.GetAllProduct(r.Context())
-	if appErr != nil {
-		helper.Logger(http.MethodGet, appErr.StatusCode, appErr.Message)
-		w.WriteHeader(appErr.StatusCode)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": appErr.Message}); encErr != nil {
-			log.Printf("failed to encode error response: %v", encErr)
-		}
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(result); err != nil {
-		log.Printf("failed to encode response: %v", err)
-	}
+type productController struct {
+	service service.ProductService
 }
 
-func (p *ProductControllerImpl) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var request payload.ProductRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		log.Printf("POST /products bad request: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); encErr != nil {
-			log.Printf("failed to encode error response: %v", encErr)
-		}
-		return
-	}
-	result, appErr := p.ProductService.CreateProduct(r.Context(), request)
-	if appErr != nil {
-		helper.Logger(http.MethodPost, appErr.StatusCode, appErr.Message)
-		w.WriteHeader(appErr.StatusCode)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": appErr.Message}); encErr != nil {
-			log.Printf("failed to encode error response: %v", encErr)
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(map[string]any{"message": "success", "data": result}); err != nil {
-		log.Printf("failed to encode response: %v", err)
-	}
+// NewProductController constructs a ProductController.
+func NewProductController(svc service.ProductService) ProductController {
+	return &productController{service: svc}
 }
 
-func (p *ProductControllerImpl) UpdateProduct(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+// ListProducts handles GET /api/v1/products?page=&per_page=.
+func (c *productController) ListProducts(w http.ResponseWriter, r *http.Request) {
+	page := queryInt(r, "page", 1)
+	perPage := queryInt(r, "per_page", 10)
+
+	items, total, appErr := c.service.List(r.Context(), page, perPage)
+	if appErr != nil {
+		helper.WriteAppError(w, appErr)
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	totalPages := 0
+	if perPage > 0 {
+		totalPages = int((total + int64(perPage) - 1) / int64(perPage))
+	}
+	meta := payload.ListProductsMeta{Page: page, PerPage: perPage, Total: total, TotalPages: totalPages}
+	helper.WriteSuccessWithMeta(w, http.StatusOK, "success", items, meta)
+}
+
+// GetProductByID handles GET /api/v1/products/{id}.
+func (c *productController) GetProductByID(w http.ResponseWriter, r *http.Request) {
+	id, appErr := parseIDParam(r, "id")
+	if appErr != nil {
+		helper.WriteAppError(w, appErr)
+		return
+	}
+	result, err := c.service.GetByID(r.Context(), id)
 	if err != nil {
-		log.Printf("PUT /products/%s bad request: invalid id", idStr)
-		w.WriteHeader(http.StatusBadRequest)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": "invalid product id"}); encErr != nil {
-			log.Printf("failed to encode error response: %v", encErr)
-		}
+		helper.WriteAppError(w, err)
 		return
 	}
-
-	var request payload.ProductRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		log.Printf("PUT /products/%d bad request: %v", id, err)
-		w.WriteHeader(http.StatusBadRequest)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); encErr != nil {
-			log.Printf("failed to encode error response: %v", encErr)
-		}
-		return
-	}
-
-	result, appErr := p.ProductService.UpdateProduct(r.Context(), request, id)
-	if appErr != nil {
-		helper.Logger(http.MethodPut, appErr.StatusCode, appErr.Message)
-		w.WriteHeader(appErr.StatusCode)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": appErr.Message}); encErr != nil {
-			log.Printf("failed to encode error response: %v", encErr)
-		}
-		return
-	}
-
-	log.Printf("PUT /products/%d success", id)
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]any{"message": "success", "data": result}); err != nil {
-		log.Printf("failed to encode response: %v", err)
-	}
+	helper.WriteSuccess(w, http.StatusOK, "success", result)
 }
 
-func (p *ProductControllerImpl) DeleteProduct(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+// CreateProduct handles POST /api/v1/products.
+func (c *productController) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	var req payload.CreateProductRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.WriteError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
-
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		log.Printf("DELETE /products/%s bad request: invalid id", idStr)
-		w.WriteHeader(http.StatusBadRequest)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": "invalid product id"}); encErr != nil {
-			log.Printf("failed to encode response: %v", encErr)
-		}
-		return
-	}
-
-	ok, appErr := p.ProductService.DeleteProduct(r.Context(), id)
+	result, appErr := c.service.Create(r.Context(), req)
 	if appErr != nil {
-		helper.Logger(http.MethodDelete, appErr.StatusCode, appErr.Message)
-		w.WriteHeader(appErr.StatusCode)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": appErr.Message}); encErr != nil {
-			log.Printf("failed to encode response: %v", encErr)
-		}
+		helper.WriteAppError(w, appErr)
 		return
 	}
+	helper.WriteSuccess(w, http.StatusCreated, "success", result)
+}
 
-	if !ok {
-		log.Printf("DELETE /products/%d not found", id)
-		w.WriteHeader(http.StatusNotFound)
-		if encErr := json.NewEncoder(w).Encode(map[string]string{"error": "product not found"}); encErr != nil {
-			log.Printf("failed to encode response: %v", encErr)
-		}
+// UpdateProduct handles PUT /api/v1/products/{id}.
+func (c *productController) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	id, appErr := parseIDParam(r, "id")
+	if appErr != nil {
+		helper.WriteAppError(w, appErr)
 		return
 	}
-
-	log.Printf("DELETE /products/%d success", id)
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "product deleted successfully"}); err != nil {
-		log.Printf("failed to encode response: %v", err)
+	var req payload.UpdateProductRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.WriteError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
 	}
+	result, err := c.service.Update(r.Context(), id, req)
+	if err != nil {
+		helper.WriteAppError(w, err)
+		return
+	}
+	helper.WriteSuccess(w, http.StatusOK, "success", result)
+}
+
+// DeleteProduct handles DELETE /api/v1/products/{id}.
+func (c *productController) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	id, appErr := parseIDParam(r, "id")
+	if appErr != nil {
+		helper.WriteAppError(w, appErr)
+		return
+	}
+	if err := c.service.Delete(r.Context(), id); err != nil {
+		helper.WriteAppError(w, err)
+		return
+	}
+	helper.WriteSuccess(w, http.StatusOK, "product deleted successfully", nil)
+}
+
+func parseIDParam(r *http.Request, key string) (uint, *helper.AppError) {
+	raw := chi.URLParam(r, key)
+	n, err := strconv.ParseUint(raw, 10, 32)
+	if err != nil || n == 0 {
+		return 0, helper.BadRequest("invalid product id")
+	}
+	return uint(n), nil
+}
+
+func queryInt(r *http.Request, key string, fallback int) int {
+	raw := r.URL.Query().Get(key)
+	if raw == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 {
+		return fallback
+	}
+	return n
 }

@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"golang-restful-api/config"
-	"golang-restful-api/controller"
-	"golang-restful-api/repository"
-	"golang-restful-api/service"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -13,37 +10,79 @@ import (
 	"syscall"
 	"time"
 
+	"golang-restful-api/config"
+	"golang-restful-api/controller"
+	"golang-restful-api/helper"
+	"golang-restful-api/repository"
+	"golang-restful-api/service"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	db, err := config.OpenDB()
+	// .env is optional: missing file must not crash production.
+	_ = godotenv.Load()
+
+	cfg := config.Load()
+
+	db, err := config.OpenDB(cfg)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
 	defer config.CloseDB(db)
 
-	r := chi.NewRouter()
+	if err := config.Migrate(db); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
 
-	productRepository := repository.NewProductRepositoryImpl(db)
-	productService := service.NewProductServiceImpl(db, productRepository)
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(60 * time.Second))
+
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		helper.WriteSuccess(w, http.StatusOK, "ok", map[string]string{"status": "up"})
+	})
+
+	productRepo := repository.NewProductRepositoryImpl(db)
+	productService := service.NewProductServiceImpl(productRepo)
 	productController := controller.NewProductController(productService)
 
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/products", func(r chi.Router) {
+			r.Get("/", productController.ListProducts)
+			r.Post("/", productController.CreateProduct)
+			r.Get("/{id}", productController.GetProductByID)
+			r.Put("/{id}", productController.UpdateProduct)
+			r.Delete("/{id}", productController.DeleteProduct)
+		})
+	})
+
+	// Legacy unversioned routes (deprecated, kept for backward compatibility).
 	r.Route("/products", func(r chi.Router) {
-		r.Get("/", productController.GetAllProduct)
+		r.Get("/", productController.ListProducts)
 		r.Post("/", productController.CreateProduct)
+		r.Get("/{id}", productController.GetProductByID)
 		r.Put("/{id}", productController.UpdateProduct)
 		r.Delete("/{id}", productController.DeleteProduct)
 	})
 
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: r,
+		Addr:         ":" + cfg.AppPort,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	go func() {
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("listen: %s \n", err)
+		log.Printf("server listening on %s", server.Addr)
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen: %v", err)
 		}
 	}()
 
@@ -52,7 +91,7 @@ func main() {
 	<-quit
 	log.Println("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("server forced to shutdown: %v", err)

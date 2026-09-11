@@ -3,50 +3,103 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
+
+	"golang-restful-api/entities"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func OpenDB() (*gorm.DB, error) {
-	requiredEnvs := []string{"DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME"}
-	for _, env := range requiredEnvs {
-		if val := os.Getenv(env); val == "" {
-			return nil, fmt.Errorf("required environment variable %s is not set", env)
-		}
-	}
+// Config holds all application configuration loaded from environment.
+type Config struct {
+	AppPort    string
+	DBUser     string
+	DBPassword string
+	DBHost     string
+	DBPort     string
+	DBName     string
+}
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+// Load reads configuration from environment variables with sane defaults.
+// Missing .env file is NOT fatal; env vars / platform defaults are used.
+func Load() Config {
+	return Config{
+		AppPort:    getEnv("APP_PORT", "6767"),
+		DBUser:     getEnv("DB_USER", "root"),
+		DBPassword: getEnv("DB_PASSWORD", ""),
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		DBPort:     getEnv("DB_PORT", "3306"),
+		DBName:     getEnv("DB_NAME", "products"),
+	}
+}
+
+// DSN builds a MySQL DSN from the config.
+func (c Config) DSN() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName,
 	)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+}
+
+// OpenDB opens a GORM MySQL connection with production-ready pool settings.
+func OpenDB(cfg Config) (*gorm.DB, error) {
+	db, err := gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Error),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	sqlDb, err := db.DB()
+	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, err
 	}
 
-	sqlDb.SetMaxIdleConns(10)
-	sqlDb.SetMaxOpenConns(100)
-	sqlDb.SetConnMaxIdleTime(5 * time.Minute)
-	sqlDb.SetConnMaxLifetime(30 * time.Minute)
+	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 10)
+	maxOpen := getEnvInt("DB_MAX_OPEN_CONNS", 100)
+
+	sqlDB.SetMaxIdleConns(maxIdle)
+	sqlDB.SetMaxOpenConns(maxOpen)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
 
 	return db, nil
 }
 
+// Migrate runs AutoMigrate for all entities. Safe for dev; use versioned
+// migrations (golang-migrate) for production schema evolution.
+func Migrate(db *gorm.DB) error {
+	return db.AutoMigrate(&entities.ProductEntity{})
+}
+
+// CloseDB closes the underlying sql.DB connection.
 func CloseDB(db *gorm.DB) {
+	if db == nil {
+		return
+	}
 	if sqlDB, err := db.DB(); err == nil {
 		_ = sqlDB.Close()
 	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return fallback
 }
