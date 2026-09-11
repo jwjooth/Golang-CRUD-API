@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/go-chi/chi/v5 v5.3.2
+	github.com/joho/godotenv v1.5.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.2
 )
@@ -15,3 +16,5 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	golang.org/x/text v0.20.0 // indirect
 )
+
+tool github.com/joho/godotenv/cmd/godotenv
