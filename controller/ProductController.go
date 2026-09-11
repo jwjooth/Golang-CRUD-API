@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type ProductControllerImpl struct {
@@ -22,8 +24,8 @@ func NewProductController(service service.ProductService) *ProductControllerImpl
 type ProductController interface {
 	GetAllProduct(w http.ResponseWriter, r *http.Request)
 	CreateProduct(w http.ResponseWriter, r *http.Request)
-	UpdateProduct(w http.ResponseWriter, r *http.Request, id int)
-	DeleteProduct(w http.Response, r *http.Request, id int)
+	UpdateProduct(w http.ResponseWriter, r *http.Request)
+	DeleteProduct(w http.ResponseWriter, r *http.Request)
 }
 
 func (p *ProductControllerImpl) GetAllProduct(w http.ResponseWriter, r *http.Request) {
@@ -51,21 +53,24 @@ func (p *ProductControllerImpl) CreateProduct(w http.ResponseWriter, r *http.Req
 	var request payload.ProductRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		if jsErr := json.NewEncoder(w).Encode(request); jsErr != nil {
-			log.Printf("failed to encode request: %v", jsErr)
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); jsErr != nil {
+			log.Printf("failed to encode response: %v", jsErr)
 		}
 		return
 	}
 	result, err := p.ProductService.CreateProduct(r.Context(), request)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		if jsErr := json.NewEncoder(w).Encode(result); jsErr != nil {
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Message}); jsErr != nil {
 			log.Printf("failed to encode response: %v", jsErr)
 		}
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(map[string]any{"message": "success", "data": result}); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
 }
 
 func (p *ProductControllerImpl) UpdateProduct(w http.ResponseWriter, r *http.Request) {
@@ -73,44 +78,68 @@ func (p *ProductControllerImpl) UpdateProduct(w http.ResponseWriter, r *http.Req
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	id := r.URL.Query().Get("id")
 
-	var request payload.ProductRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		if jsErr := json.NewEncoder(w).Encode(request); jsErr != nil {
-			log.Printf("failed to encode request: %v", jsErr)
-		}
-		return
-	}
-
-	idConvert, _ := strconv.Atoi(id)
-
-	result, err := p.ProductService.UpdateProduct(r.Context(), request, idConvert)
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		if jsErr := json.NewEncoder(w).Encode(result); jsErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": "invalid product id"}); jsErr != nil {
 			log.Printf("failed to encode response: %v", jsErr)
 		}
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (p *ProductControllerImpl) DeleteProduct(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.Atoi(r.URL.Query().Get("id"))
-	if r.Method != http.MethodDelete {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	result, err := p.ProductService.DeleteProduct(r.Context(), id)
-	if err != nil {
-		w.WriteHeader(http.StatusOK)
-		if jsErr := json.NewEncoder(w).Encode(result); jsErr != nil {
-			log.Printf("faile to encode response: %v", jsErr)
+	var request payload.ProductRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); jsErr != nil {
+			log.Printf("failed to encode response: %v", jsErr)
 		}
 		return
 	}
 
+	result, err := p.ProductService.UpdateProduct(r.Context(), request, id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); jsErr != nil {
+			log.Printf("failed to encode response: %v", jsErr)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]any{"message": "success", "data": result}); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
+}
+
+func (p *ProductControllerImpl) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": "invalid product id"}); jsErr != nil {
+			log.Printf("failed to encode response: %v", jsErr)
+		}
+		return
+	}
+
+	_, err = p.ProductService.DeleteProduct(r.Context(), id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		if jsErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); jsErr != nil {
+			log.Printf("failed to encode response: %v", jsErr)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": "product deleted successfully"}); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
 }

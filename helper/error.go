@@ -6,3 +6,7 @@ type BaseErrorResponse struct {
 	Message    string `json:"message"`
 	Data       any    `json:"data"`
 }
+
+func (b *BaseErrorResponse) Error() string {
+	return b.Message
+}

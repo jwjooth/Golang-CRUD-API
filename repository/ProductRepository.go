@@ -29,42 +29,42 @@ func NewProductRepositoryImpl(db *gorm.DB) ProductRepository {
 
 func (p *ProductRepositoryImpl) CreateProduct(ctx context.Context, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse) {
 	if request.Name == "" {
-		return payload.ProductResponse{}, errorHelper("name is required")
+		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "name is required")
 	}
 	if request.Price < 0 {
-		return payload.ProductResponse{}, errorHelper("price cant be less than zero")
+		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "price cant be less than zero")
 	}
 	if request.Price == 0 {
-		return payload.ProductResponse{}, errorHelper("price is required")
+		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "price is required")
 	}
 	if request.Stock < 0 {
-		return payload.ProductResponse{}, errorHelper("stock cant be less than zero")
+		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "stock cant be less than zero")
 	}
 	if request.Stock == 0 {
-		return payload.ProductResponse{}, errorHelper("stock is required")
+		return payload.ProductResponse{}, errorHelper(http.StatusBadRequest, "stock is required")
 	}
 
-	records := payload.ProductResponse{
+	product := entities.ProductEntity{
 		Name:        request.Name,
 		Description: request.Description,
 		Price:       request.Price,
 		Stock:       request.Stock,
 	}
 
-	if err := p.db.WithContext(ctx).Create(&records).Error; err != nil {
-		return payload.ProductResponse{}, errorHelper("failed to create product")
+	if err := p.db.WithContext(ctx).Create(&product).Error; err != nil {
+		return payload.ProductResponse{}, errorHelper(http.StatusInternalServerError, "failed to create product")
 	}
 
-	return records, nil
+	return toResponse(product), nil
 }
 
 func (p *ProductRepositoryImpl) GetAllProduct(ctx context.Context) ([]payload.ProductResponse, *helper.BaseErrorResponse) {
-	var records []payload.ProductResponse
-	if dbErr := p.db.Find(&records).Error; dbErr != nil {
-		return nil, errorHelper("failed to fetch products")
+	var records []entities.ProductEntity
+	if dbErr := p.db.WithContext(ctx).Find(&records).Error; dbErr != nil {
+		return nil, errorHelper(http.StatusInternalServerError, "failed to fetch products")
 	}
 
-	return records, nil
+	return toResponses(records), nil
 }
 
 func (p *ProductRepositoryImpl) UpdateProduct(ctx context.Context, id int, request payload.ProductRequest) (payload.ProductResponse, *helper.BaseErrorResponse) {
@@ -81,40 +81,49 @@ func (p *ProductRepositoryImpl) UpdateProduct(ctx context.Context, id int, reque
 	}
 
 	if dbErr := p.db.WithContext(ctx).Model(&entities.ProductEntity{}).Where("id = ?", id).Updates(updates).Error; dbErr != nil {
-		return payload.ProductResponse{}, errorHelper("failed to update product data")
+		return payload.ProductResponse{}, errorHelper(http.StatusInternalServerError, "failed to update product data")
 	}
 
 	var updated entities.ProductEntity
 	if err := p.db.WithContext(ctx).First(&updated, id).Error; err != nil {
-		return payload.ProductResponse{}, errorHelper("failed to fetch updated product")
+		return payload.ProductResponse{}, errorHelper(http.StatusInternalServerError, "failed to fetch updated product")
 	}
 
-	return payload.ProductResponse{
-		Id:          updated.Id,
-		Name:        updated.Name,
-		Description: updated.Description,
-		Price:       updated.Price,
-		Stock:       updated.Stock,
-		CreatedAt:   updated.CreatedAt,
-		UpdatedAt:   updated.UpdatedAt,
-	}, nil
+	return toResponse(updated), nil
 }
 
 func (p *ProductRepositoryImpl) DeleteProduct(ctx context.Context, id int) (bool, *helper.BaseErrorResponse) {
-	var records payload.ProductResponse
-
-	err := p.db.Delete(&records).Error
-	if err != nil {
-		return false, errorHelper("failed to delete product data")
+	if err := p.db.WithContext(ctx).Delete(&entities.ProductEntity{}, id).Error; err != nil {
+		return false, errorHelper(http.StatusInternalServerError, "failed to delete product data")
 	}
 
 	return true, nil
 }
 
-func errorHelper(kind string) *helper.BaseErrorResponse {
+func errorHelper(statusCode int, message string) *helper.BaseErrorResponse {
 	return &helper.BaseErrorResponse{
-		StatusCode: http.StatusInternalServerError,
-		Message:    kind,
+		StatusCode: statusCode,
+		Message:    message,
 		Data:       nil,
 	}
+}
+
+func toResponse(product entities.ProductEntity) payload.ProductResponse {
+	return payload.ProductResponse{
+		Id:          product.Id,
+		Name:        product.Name,
+		Description: product.Description,
+		Price:       product.Price,
+		Stock:       product.Stock,
+		CreatedAt:   product.CreatedAt,
+		UpdatedAt:   product.UpdatedAt,
+	}
+}
+
+func toResponses(products []entities.ProductEntity) []payload.ProductResponse {
+	resp := make([]payload.ProductResponse, len(products))
+	for i, p := range products {
+		resp[i] = toResponse(p)
+	}
+	return resp
 }

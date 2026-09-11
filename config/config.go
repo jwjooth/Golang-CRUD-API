@@ -37,3 +37,9 @@ func OpenDB() (*gorm.DB, error) {
 
 	return db, nil
 }
+
+func CloseDB(db *gorm.DB) {
+	if sqlDB, err := db.DB(); err == nil {
+		_ = sqlDB.Close()
+	}
+}

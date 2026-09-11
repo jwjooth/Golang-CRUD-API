@@ -21,6 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
+	defer config.CloseDB(db)
 
 	r := chi.NewRouter()
 
@@ -31,8 +32,8 @@ func main() {
 	r.Route("/products", func(r chi.Router) {
 		r.Get("/", productController.GetAllProduct)
 		r.Post("/", productController.CreateProduct)
-		r.Get("/{id}", productController.UpdateProduct)
-		r.Get("/{id}", productController.DeleteProduct)
+		r.Put("/{id}", productController.UpdateProduct)
+		r.Delete("/{id}", productController.DeleteProduct)
 	})
 
 	server := &http.Server{
