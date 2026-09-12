@@ -51,6 +51,10 @@ func main() {
 	productRepo := repository.NewProductRepositoryImpl(db)
 	productService := service.NewProductServiceImpl(productRepo)
 	productController := controller.NewProductController(productService)
+	
+	bookRepo := repository.NewBookRepositoryImpl(db)
+	bookService := service.NewBookServiceImpl(bookRepo)
+	bookController := controller.NewBookController(bookService)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/products", func(r chi.Router) {
@@ -59,6 +63,9 @@ func main() {
 			r.Get("/{id}", productController.GetProductByID)
 			r.Put("/{id}", productController.UpdateProduct)
 			r.Delete("/{id}", productController.DeleteProduct)
+		})
+		r.Route("/books", func(r chi.Router){
+			r.Get("/", bookController.ListBooks)
 		})
 	})
 
