@@ -29,7 +29,7 @@ type ListBookMeta struct {
 	TotalPage int `json:"total_page"`
 }
 
-type ListBookrResponse struct {
+type ListBookResponse struct {
 	Data []BookResponse `json:"data"`
 	Meta ListBookMeta   `json:"meta"`
 }
