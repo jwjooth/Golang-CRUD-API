@@ -3,6 +3,9 @@ package helper
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // SuccessEnvelope is the standard success body.
@@ -42,4 +45,25 @@ func WriteError(w http.ResponseWriter, status int, message string) {
 // WriteAppError maps an AppError (or generic error) to a JSON error body.
 func WriteAppError(w http.ResponseWriter, err error) {
 	WriteError(w, CodeOf(err), MessageOf(err))
+}
+
+func ParseIDParam(r *http.Request, key string) (uint, *AppError) {
+	raw := chi.URLParam(r, key)
+	n, err := strconv.ParseUint(raw, 10, 32)
+	if err != nil || n == 0 {
+		return 0, BadRequest("invalid product id")
+	}
+	return uint(n), nil
+}
+
+func QueryInt(r *http.Request, key string, fallback int) int {
+	raw := r.URL.Query().Get(key)
+	if raw == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 {
+		return fallback
+	}
+	return n
 }
