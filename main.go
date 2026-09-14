@@ -51,10 +51,10 @@ func main() {
 	productRepo := repository.NewProductRepositoryImpl(db)
 	productService := service.NewProductServiceImpl(productRepo)
 	productController := controller.NewProductController(productService)
-	
+
 	bookRepo := repository.NewBookRepositoryImpl(db)
 	bookService := service.NewBookServiceImpl(bookRepo)
-	bookController := controller.NewBookController(bookService)
+	bookController := controller.NewBookControllerImpl(bookService)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/products", func(r chi.Router) {
@@ -64,18 +64,13 @@ func main() {
 			r.Put("/{id}", productController.UpdateProduct)
 			r.Delete("/{id}", productController.DeleteProduct)
 		})
-		r.Route("/books", func(r chi.Router){
-			r.Get("/", bookController.ListBooks)
+		r.Route("/books", func(r chi.Router) {
+			r.Get("/", bookController.GetAll)
+			r.Post("/", bookController.Create)
+			r.Get("/{id}", bookController.GetById)
+			r.Put("/{id}", bookController.Update)
+			r.Delete("/{id}", bookController.Delete)
 		})
-	})
-
-	// Legacy unversioned routes (deprecated, kept for backward compatibility).
-	r.Route("/products", func(r chi.Router) {
-		r.Get("/", productController.ListProducts)
-		r.Post("/", productController.CreateProduct)
-		r.Get("/{id}", productController.GetProductByID)
-		r.Put("/{id}", productController.UpdateProduct)
-		r.Delete("/{id}", productController.DeleteProduct)
 	})
 
 	server := &http.Server{
