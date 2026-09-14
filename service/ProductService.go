@@ -73,7 +73,7 @@ func (s *productService) GetByID(ctx context.Context, id uint) (payload.ProductR
 
 func (s *productService) Create(ctx context.Context, req payload.CreateProductRequest) (payload.ProductResponse, *helper.AppError) {
 	if err := s.validate.Struct(req); err != nil {
-		return payload.ProductResponse{}, helper.BadRequest(formatValidationError(err))
+		return payload.ProductResponse{}, helper.BadRequest(helper.FormatValidationError(err))
 	}
 
 	product := &entities.ProductEntity{
@@ -94,7 +94,7 @@ func (s *productService) Update(ctx context.Context, id uint, req payload.Update
 		return payload.ProductResponse{}, helper.BadRequest("invalid product id")
 	}
 	if err := s.validate.Struct(req); err != nil {
-		return payload.ProductResponse{}, helper.BadRequest(formatValidationError(err))
+		return payload.ProductResponse{}, helper.BadRequest(helper.FormatValidationError(err))
 	}
 
 	existing, err := s.repo.FindByID(ctx, id)
@@ -128,27 +128,4 @@ func (s *productService) Delete(ctx context.Context, id uint) *helper.AppError {
 		return helper.Internal("failed to delete product", err)
 	}
 	return nil
-}
-
-func formatValidationError(err error) string {
-	var verrs validator.ValidationErrors
-	if errors.As(err, &verrs) {
-		for _, fe := range verrs {
-			switch fe.Tag() {
-			case "required":
-				return fe.Field() + " is required"
-			case "gt":
-				return fe.Field() + " must be greater than " + fe.Param()
-			case "gte":
-				return fe.Field() + " must be greater than or equal to " + fe.Param()
-			case "max":
-				return fe.Field() + " must be at most " + fe.Param() + " characters"
-			case "min":
-				return fe.Field() + " must be at least " + fe.Param() + " characters"
-			default:
-				return fe.Field() + " is invalid"
-			}
-		}
-	}
-	return "invalid request body"
 }
