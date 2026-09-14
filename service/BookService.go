@@ -49,7 +49,7 @@ func (b *BookServiceImpl) GetAll(ctx context.Context, page, perPage int) ([]payl
 }
 
 func (b *BookServiceImpl) GetById(ctx context.Context, id uint) (payload.BookResponse, *helper.AppError) {
-	if id != 0 {
+	if id == 0 {
 		return payload.BookResponse{}, helper.BadRequest("invalid book id")
 	}
 	book, err := b.repository.GetById(ctx, id)
