@@ -3,13 +3,10 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"golang-restful-api/helper"
 	"golang-restful-api/payload"
 	"golang-restful-api/service"
-
-	"github.com/go-chi/chi/v5"
 )
 
 // ProductController is the HTTP boundary: decode → service → encode.
@@ -33,8 +30,8 @@ func NewProductController(svc service.ProductService) ProductController {
 
 // ListProducts handles GET /api/v1/products?page=&per_page=.
 func (c *productController) ListProducts(w http.ResponseWriter, r *http.Request) {
-	page := queryInt(r, "page", 1)
-	perPage := queryInt(r, "per_page", 10)
+	page := helper.QueryInt(r, "page", 1)
+	perPage := helper.QueryInt(r, "per_page", 10)
 
 	items, total, appErr := c.service.List(r.Context(), page, perPage)
 	if appErr != nil {
@@ -52,7 +49,7 @@ func (c *productController) ListProducts(w http.ResponseWriter, r *http.Request)
 
 // GetProductByID handles GET /api/v1/products/{id}.
 func (c *productController) GetProductByID(w http.ResponseWriter, r *http.Request) {
-	id, appErr := parseIDParam(r, "id")
+	id, appErr := helper.ParseIDParam(r, "id")
 	if appErr != nil {
 		helper.WriteAppError(w, appErr)
 		return
@@ -82,7 +79,7 @@ func (c *productController) CreateProduct(w http.ResponseWriter, r *http.Request
 
 // UpdateProduct handles PUT /api/v1/products/{id}.
 func (c *productController) UpdateProduct(w http.ResponseWriter, r *http.Request) {
-	id, appErr := parseIDParam(r, "id")
+	id, appErr := helper.ParseIDParam(r, "id")
 	if appErr != nil {
 		helper.WriteAppError(w, appErr)
 		return
@@ -102,7 +99,7 @@ func (c *productController) UpdateProduct(w http.ResponseWriter, r *http.Request
 
 // DeleteProduct handles DELETE /api/v1/products/{id}.
 func (c *productController) DeleteProduct(w http.ResponseWriter, r *http.Request) {
-	id, appErr := parseIDParam(r, "id")
+	id, appErr := helper.ParseIDParam(r, "id")
 	if appErr != nil {
 		helper.WriteAppError(w, appErr)
 		return
@@ -112,25 +109,4 @@ func (c *productController) DeleteProduct(w http.ResponseWriter, r *http.Request
 		return
 	}
 	helper.WriteSuccess(w, http.StatusOK, "product deleted successfully", nil)
-}
-
-func parseIDParam(r *http.Request, key string) (uint, *helper.AppError) {
-	raw := chi.URLParam(r, key)
-	n, err := strconv.ParseUint(raw, 10, 32)
-	if err != nil || n == 0 {
-		return 0, helper.BadRequest("invalid product id")
-	}
-	return uint(n), nil
-}
-
-func queryInt(r *http.Request, key string, fallback int) int {
-	raw := r.URL.Query().Get(key)
-	if raw == "" {
-		return fallback
-	}
-	n, err := strconv.Atoi(raw)
-	if err != nil || n < 1 {
-		return fallback
-	}
-	return n
 }
