@@ -1,9 +1,12 @@
 package service
 
 import (
-	"errors"
-	"golang-restful-api/payload"
 	"context"
+	"golang-restful-api/helper"
+	"golang-restful-api/payload"
+	"golang-restful-api/repository"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type CategoryService interface {
@@ -16,7 +19,5 @@ type CategoryService interface {
 
 type CategoryServiceImpl struct {
 	repository *repository.CategoryRepository
-	validate *validator.Validate
+	validate   *validator.Validate
 }
-
-
