@@ -1,12 +1,15 @@
 package payload
 
-import "time"
+import (
+	"golang-restful-api/entities"
+	"time"
+)
 
 type BookRequest struct {
-	Title      string `json:"title" validate="required"`
-	CategoryID uint   `json:"category_id" validate="required"`
-	Author     string `json:"author" validate="required"`
-	Stock      int    `json:"stock" validate="required"`
+	Title      string `json:"title" validate:"required"`
+	CategoryID uint   `json:"category_id" validate:"required"`
+	Author     string `json:"author" validate:"required"`
+	Stock      int    `json:"stock" validate:"required"`
 }
 
 type BookResponse struct {
@@ -29,4 +32,24 @@ type ListBookMeta struct {
 type ListBookrResponse struct {
 	Data []BookResponse `json:"data"`
 	Meta ListBookMeta   `json:"meta"`
+}
+
+func NewBookResponse(e entities.BookEntity) BookResponse {
+	return BookResponse{
+		ID:         e.ID,
+		Title:      e.Title,
+		CategoryID: *e.CategoryId,
+		Author:     e.Author,
+		Stock:      e.Stock,
+		CreatedAt:  e.CreatedAt,
+		UpdatedAt:  e.UpdatedAt,
+	}
+}
+
+func NewBookResponses(list []entities.BookEntity) []BookResponse {
+	out := make([]BookResponse, 0, len(list))
+	for _, e := range list {
+		out = append(out, NewBookResponse(e))
+	}
+	return out
 }

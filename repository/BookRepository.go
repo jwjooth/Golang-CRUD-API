@@ -2,14 +2,15 @@ package repository
 
 import (
 	"context"
-	"golang-restful-api/entities"
-	"gorm.io/gorm"
 	"errors"
+	"golang-restful-api/entities"
+
+	"gorm.io/gorm"
 )
 
 type BookRepository interface {
-	GetAll(ctx context.Context, limit, offset int) ([]entities.BookEntity, int, error)
-	Create(ctx context.Context, request *entities.BookEntity)(*entities.BookEntity, error)
+	GetAll(ctx context.Context, limit, offset int) ([]entities.BookEntity, int64, error)
+	Create(ctx context.Context, request *entities.BookEntity) (*entities.BookEntity, error)
 	GetById(ctx context.Context, id uint) (*entities.BookEntity, error)
 	Update(ctx context.Context, request *entities.BookEntity) (*entities.BookEntity, error)
 	Delete(ctx context.Context, id uint) error
@@ -19,18 +20,18 @@ type BookRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewBookRepositoryImpl(db *gorm.DB) BookRepositoryImpl {
+func NewBookRepositoryImpl(db *gorm.DB) *BookRepositoryImpl {
 	return &BookRepositoryImpl{db: db}
 }
 
-func (b *BookRepositoryImpl) GetAll (ctx context.Context, limit, offset int) ([]entities.BookEntity, int, error){
-	var total int
-	if err := r.db.WithContext(ctx).Model(&entities.BookEntity{}).Count(&total).Error; err != nil {
+func (b *BookRepositoryImpl) GetAll(ctx context.Context, limit, offset int) ([]entities.BookEntity, int64, error) {
+	var total int64
+	if err := b.db.WithContext(ctx).Model(&entities.BookEntity{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	var records []entities.BookEntity
-	query := r.db.WithContext(ctx).Order("id asc")
+	query := b.db.WithContext(ctx).Order("id asc")
 	if limit > 0 {
 		query.Limit(limit)
 	}
@@ -43,30 +44,30 @@ func (b *BookRepositoryImpl) GetAll (ctx context.Context, limit, offset int) ([]
 	return records, total, nil
 }
 
-func (b *BookRepositoryImpl) GetById (ctx context.Context, id uint) (*entities.BookEntity, error){
+func (b *BookRepositoryImpl) GetById(ctx context.Context, id uint) (*entities.BookEntity, error) {
 	var book entities.BookEntity
-	if err := r.db.WithContext(ctx).First(&book, id).Error; err != nil {
+	if err := b.db.WithContext(ctx).First(&book, id).Error; err != nil {
 		return nil, err
 	}
 	return &book, nil
 }
 
-func (b *BookRepositoryImpl) Create(ctx context.Context, request *entities.BookEntity)(*entities.BookEntity, error){
-	if err := r.db.WithContext(ctx).Create(request).Error; err != nil {
+func (b *BookRepositoryImpl) Create(ctx context.Context, request *entities.BookEntity) (*entities.BookEntity, error) {
+	if err := b.db.WithContext(ctx).Create(request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func (b *BookRepositoryImpl) Update(ctx context.Context, request *entities.BookEntity)(*entities.BookEntity, error){
-	if err := r.db.WithContext(ctx).Save(request).Error; err != nil {
+func (b *BookRepositoryImpl) Update(ctx context.Context, request *entities.BookEntity) (*entities.BookEntity, error) {
+	if err := b.db.WithContext(ctx).Save(request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func (b *BookRepositoryImpl) Delete (ctx context.Context, id uint) bool {
-	result := r.db.WithContext(ctx).Delete(&entities.BookEntity{}, id)
+func (b *BookRepositoryImpl) Delete(ctx context.Context, id uint) error {
+	result := b.db.WithContext(ctx).Delete(&entities.BookEntity{}, id)
 	if result.Error != nil {
 		return result.Error
 	}
