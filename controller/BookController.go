@@ -1,7 +1,4 @@
 package controller
-<<<<<<< HEAD
-||||||| eda2acc
-=======
 
 import (
 	"encoding/json"
@@ -111,4 +108,3 @@ func (b *BookControllerImpl) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	helper.WriteSuccess(w, http.StatusOK, "book deleted successfully", nil)
 }
->>>>>>> 95c71bc204f6f6f1eeb0c0cbc6697ec187e04c28

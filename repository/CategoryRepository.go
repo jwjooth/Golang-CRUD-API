@@ -1,7 +1,4 @@
 package repository
-<<<<<<< HEAD
-||||||| eda2acc
-=======
 
 import (
 	"context"
@@ -76,4 +73,3 @@ func (c *CategoryRepositoryImpl) Delete(ctx context.Context, id uint) error {
 	}
 	return nil
 }
->>>>>>> 95c71bc204f6f6f1eeb0c0cbc6697ec187e04c28

@@ -1,7 +1,4 @@
 package service
-<<<<<<< HEAD
-||||||| eda2acc
-=======
 
 import (
 	"context"
@@ -24,4 +21,3 @@ type CategoryServiceImpl struct {
 	repository *repository.CategoryRepository
 	validate   *validator.Validate
 }
->>>>>>> 95c71bc204f6f6f1eeb0c0cbc6697ec187e04c28
