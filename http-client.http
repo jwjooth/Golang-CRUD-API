@@ -1,0 +1,68 @@
+### GET all products
+GET http://localhost:6767/api/v1/products
+Accept: application/json
+
+### GET by id product
+GET http://localhost:6767/api/v1/products/22
+Accept: application/json
+
+### POST product
+POST http://localhost:6767/api/v1/products
+Content-Type: application/json
+
+{
+  "name": "testing product",
+  "description": "testing product",
+  "price": 1000,
+  "stock": 1
+}
+
+### PUT by id product
+PUT http://localhost:6767/api/v1/products/22
+Content-Type: application/json
+
+{
+  "name": "testing update product",
+  "description": "testing update product",
+  "price": 2000,
+  "stock": 2
+}
+
+### DELETE by id product
+DELETE http://localhost:6767/api/v1/products/22
+
+### GET all books
+GET http://localhost:6767/api/v1/books
+Accept: application/json
+
+### GET by id book
+GET http://localhost:6767/api/v1/books/11
+Accept: application/json
+
+### POST book
+POST http://localhost:6767/api/v1/books
+Content-Type: application/json
+
+{
+  "title": "testing book",
+  "category_id": 1,
+  "author": "testing book",
+  "stock": 1
+}
+
+### PUT by id book
+PUT http://localhost:6767/api/v1/books/11
+Content-Type: application/json
+
+{
+  "title": "testing update book",
+  "category_id": 2,
+  "author": "testing update book",
+  "stock": 2
+}
+
+### DELETE by id book
+DELETE http://localhost:6767/api/v1/books/11
+
+### GET all categories
+GET http://localhost:6767/api/v1/categories

@@ -3,10 +3,10 @@ package payload
 import "time"
 
 type BookRequest struct {
-	Title      string `json:"title" validate="required"`
-	CategoryID uint   `json:"category_id" validate="required"`
-	Author     string `json:"author" validate="required"`
-	Stock      int    `json:"stock" validate="required"`
+	Title      string `json:"title" validate:"required"`
+	CategoryID uint   `json:"category_id" validate:"required"`
+	Author     string `json:"author" validate:"required"`
+	Stock      int    `json:"stock" validate:"required"`
 }
 
 type BookResponse struct {
