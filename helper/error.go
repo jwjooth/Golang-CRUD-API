@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // AppError is the standard application error carrying an HTTP status code.
@@ -73,3 +75,26 @@ func MessageOf(err error) string {
 
 // Kept for backward compatibility with existing callers.
 type BaseErrorResponse = AppError
+
+func FormatValidationError(err error) string {
+	var verrs validator.ValidationErrors
+	if errors.As(err, &verrs) {
+		for _, fe := range verrs {
+			switch fe.Tag() {
+			case "required":
+				return fe.Field() + " is required"
+			case "gt":
+				return fe.Field() + " must be greater than " + fe.Param()
+			case "gte":
+				return fe.Field() + " must be greater than or equal to " + fe.Param()
+			case "max":
+				return fe.Field() + " must be at most " + fe.Param() + " characters"
+			case "min":
+				return fe.Field() + " must be at least " + fe.Param() + " characters"
+			default:
+				return fe.Field() + " is invalid"
+			}
+		}
+	}
+	return "invalid request body"
+}
