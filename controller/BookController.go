@@ -24,6 +24,16 @@ func NewBookControllerImpl(service service.BookService) BookController {
 	return &BookControllerImpl{service: service}
 }
 
+// GetAll @Summary List all books with pagination
+// @Description Retrieve a paginated list of all books
+// @Tags book
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number"
+// @Param per_page query int false "Items per page"
+// @Success 200 {object} payload.ListBookResponse
+// @Failure 500 {object} helper.ErrorEnvelope
+// @Router /books [get]
 func (b *BookControllerImpl) GetAll(w http.ResponseWriter, r *http.Request) {
 	page := helper.QueryInt(r, "page", 1)
 	perPage := helper.QueryInt(r, "per_page", 10)
@@ -49,6 +59,16 @@ func (b *BookControllerImpl) GetAll(w http.ResponseWriter, r *http.Request) {
 	helper.WriteSuccessWithMeta(w, http.StatusOK, "success", items, meta)
 }
 
+// GetById @Summary Get a book by ID
+// @Description Retrieve a single book by its unique ID
+// @Tags book
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Success 200 {object} payload.BookResponse
+// @Failure 400 {object} helper.ErrorEnvelope
+// @Failure 404 {object} helper.ErrorEnvelope
+// @Router /books/{id} [get]
 func (b *BookControllerImpl) GetById(w http.ResponseWriter, r *http.Request) {
 	id, appErr := helper.ParseIDParam(r, "id")
 	if appErr != nil {
@@ -63,6 +83,16 @@ func (b *BookControllerImpl) GetById(w http.ResponseWriter, r *http.Request) {
 	helper.WriteSuccess(w, http.StatusOK, "success", result)
 }
 
+// Create @Summary Create a new book
+// @Description Create a new book with the provided details
+// @Tags book
+// @Accept json
+// @Produce json
+// @Param body body payload.BookRequest true "Book request payload"
+// @Success 201 {object} payload.BookResponse
+// @Failure 400 {object} helper.ErrorEnvelope
+// @Failure 500 {object} helper.ErrorEnvelope
+// @Router /books [post]
 func (b *BookControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
 	var request payload.BookRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -77,6 +107,18 @@ func (b *BookControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
 	helper.WriteSuccess(w, http.StatusCreated, "success", result)
 }
 
+// Update @Summary Update an existing book
+// @Description Update an existing book by its ID with the provided details
+// @Tags book
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Param body body payload.BookRequest true "Book update payload"
+// @Success 200 {object} payload.BookResponse
+// @Failure 400 {object} helper.ErrorEnvelope
+// @Failure 404 {object} helper.ErrorEnvelope
+// @Failure 500 {object} helper.ErrorEnvelope
+// @Router /books/{id} [put]
 func (b *BookControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
 	id, appErr := helper.ParseIDParam(r, "id")
 	if appErr != nil {
@@ -96,6 +138,17 @@ func (b *BookControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
 	helper.WriteSuccess(w, http.StatusOK, "success", result)
 }
 
+// Delete @Summary Delete a book by ID
+// @Description Delete a book by its unique ID
+// @Tags book
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} helper.ErrorEnvelope
+// @Failure 404 {object} helper.ErrorEnvelope
+// @Failure 500 {object} helper.ErrorEnvelope
+// @Router /books/{id} [delete]
 func (b *BookControllerImpl) Delete(w http.ResponseWriter, r *http.Request) {
 	id, appErr := helper.ParseIDParam(r, "id")
 	if appErr != nil {
