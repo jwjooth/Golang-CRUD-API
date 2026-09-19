@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"golang-restful-api/docs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,12 +29,20 @@ import (
 // @title Golang RESTful API
 // @version 1.0.0
 // @description API documentation for the Golang RESTful API with Product, Book, and Category CRUD operations
-// @host localhost:6767
 // @BasePath /api/v1
-// @schemes http
 func main() {
 	// .env is optional: missing file must not crash production.
 	_ = godotenv.Load()
+
+	if appURL := os.Getenv("APP_URL"); appURL != "" {
+		u, err := url.Parse(appURL)
+		if err != nil {
+			log.Fatalf("invalid APP_URL: %v", err)
+		}
+
+		docs.SwaggerInfo.Host = u.Host
+		docs.SwaggerInfo.Schemes = []string{u.Scheme}
+	}
 
 	cfg := config.Load()
 
