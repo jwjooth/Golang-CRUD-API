@@ -48,13 +48,20 @@ func main() {
 		helper.WriteSuccess(w, http.StatusOK, "ok", map[string]string{"status": "up"})
 	})
 
+	//product
 	productRepo := repository.NewProductRepositoryImpl(db)
 	productService := service.NewProductServiceImpl(productRepo)
 	productController := controller.NewProductController(productService)
 
+	//book
 	bookRepo := repository.NewBookRepositoryImpl(db)
 	bookService := service.NewBookServiceImpl(bookRepo)
 	bookController := controller.NewBookControllerImpl(bookService)
+
+	//category
+	categoryRepo := repository.NewCategoryRepositoryImpl(db)
+	categoryService := service.NewCategoryServiceImpl(categoryRepo)
+	categoryController := controller.NewCategoryControllerImpl(categoryService)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/products", func(r chi.Router) {
@@ -70,6 +77,13 @@ func main() {
 			r.Get("/{id}", bookController.GetById)
 			r.Put("/{id}", bookController.Update)
 			r.Delete("/{id}", bookController.Delete)
+		})
+		r.Route("/categories", func(r chi.Router) {
+			r.Get("/", categoryController.GetAll)
+			r.Post("/", categoryController.Create)
+			r.Get("/{id}", categoryController.GetById)
+			r.Put("/{id}", categoryController.Update)
+			r.Delete("/{id}", categoryController.Delete)
 		})
 	})
 
