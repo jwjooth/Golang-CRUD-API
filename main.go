@@ -16,11 +16,20 @@ import (
 	"golang-restful-api/repository"
 	"golang-restful-api/service"
 
+	_ "golang-restful-api/docs"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// @title Golang RESTful API
+// @version 1.0.0
+// @description API documentation for the Golang RESTful API with Product, Book, and Category CRUD operations
+// @host localhost:6767
+// @BasePath /api/v1
+// @schemes http
 func main() {
 	// .env is optional: missing file must not crash production.
 	_ = godotenv.Load()
@@ -47,6 +56,9 @@ func main() {
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		helper.WriteSuccess(w, http.StatusOK, "ok", map[string]string{"status": "up"})
 	})
+
+	// Swagger UI: http://localhost:6767/swagger/index.html
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	//product
 	productRepo := repository.NewProductRepositoryImpl(db)
