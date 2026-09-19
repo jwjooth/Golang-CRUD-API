@@ -147,7 +147,6 @@ definitions:
     - name
     - price
     type: object
-host: localhost:6767
 info:
   contact: {}
   description: API documentation for the Golang RESTful API with Product, Book, and
@@ -607,6 +606,4 @@ paths:
             $ref: '#/definitions/helper.ErrorEnvelope'
       tags:
       - product
-schemes:
-- http
 swagger: "2.0"
