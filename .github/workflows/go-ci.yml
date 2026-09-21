@@ -1,0 +1,61 @@
+name: Upload Go test results
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+      - name: Install dependencies
+        run: go mod download
+      - name: Test with Go
+        run: go test ./...
+      - name: Double check code
+        run: go vet ./...
+      - name: Build the apps
+        run: go build ./...
+      - name: Formatting the code
+        run: go fmt ./...
+      - name: Comment on PR if test failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = context.issue.number;
+            const repo = context.repo.repo;
+            const owner = context.repo.owner;
+            const message = `⚠️ **CI Check Failed!**\n\nTerdapat kesalahan dalam pipeline:\n- Pastikan semua unit test lolos.\n- Jalankan 'go test ./...' secara lokal untuk melihat detail error.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+            });
+
+            const hasComment = comments.some(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('CI Check Failed')
+            );
+            
+            if (!hasComment) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: message
+              });
+            }
