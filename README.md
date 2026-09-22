@@ -1,314 +1,550 @@
-# Product CRUD API
+# Golang RESTful API
 
-Clean-architecture Product CRUD API built with Go, Chi, and GORM (MySQL).
+Clean-architecture RESTful API built with Go, Chi router, and GORM (MySQL). Implements CRUD operations for Products, Books, and Categories with strict layer boundaries, request validation, consistent JSON responses, pagination, Swagger documentation, and automated CI/CD.
 
-Thin HTTP handlers → validating service layer → entity-only repository. Consistent JSON envelopes, versioned routes, pagination, and graceful shutdown.
+---
 
-## Features
+## Table of Contents
 
-- Full Product CRUD: list (paginated), get by ID, create, full update (PUT), delete
-- Clean architecture with strict layer boundaries
-- Request validation (`go-playground/validator/v10`) in the service layer
-- Consistent success/error JSON envelopes
-- Versioned API (`/api/v1`) with backward-compatible legacy `/products` routes
-- Pagination metadata (`page`, `per_page`, `total`, `total_pages`)
-- Chi middleware stack: `RequestID`, `RealIP`, `Logger`, `Recoverer`, `Timeout`
-- MySQL connection pooling, health check, `AutoMigrate`, graceful shutdown
-- Correct HTTP semantics: `201` on create, `400` on validation, `404` on missing rows
+- [Architecture](#architecture)
+  - [Overview](#overview)
+  - [Architecture Flow Diagram](#architecture-flow-diagram)
+  - [Layer Boundaries and Rules](#layer-boundaries-and-rules)
+  - [Project Structure](#project-structure)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [Database Setup](#database-setup)
+- [Running Locally](#running-locally)
+- [Running Tests](#running-tests)
+- [Swagger Documentation](#swagger-documentation)
+- [Docker](#docker)
+- [Deployment](#deployment)
+- [API Reference & Examples](#api-reference--examples)
+  - [Response Envelope](#response-envelope)
+  - [Health Check](#health-check)
+  - [Products Endpoints](#products-endpoints)
+  - [Books Endpoints](#books-endpoints)
+  - [Categories Endpoints](#categories-endpoints)
+- [License](#license)
 
-## Tech stack
-
-| Component | Choice |
-|---|---|
-| Language | Go 1.25 |
-| Router | `github.com/go-chi/chi/v5` |
-| ORM | `gorm.io/gorm` + `gorm.io/driver/mysql` |
-| Validation | `github.com/go-playground/validator/v10` |
-| Env loading | `github.com/joho/godotenv` (optional `.env`) |
-| Database | MySQL 8.x |
+---
 
 ## Architecture
 
+### Overview
+
+The application follows the **Clean Architecture** pattern to achieve separation of concerns, high maintainability, and testability. Incoming HTTP requests pass strictly through layers from routing down to persistence:
+
+### Architecture Flow Diagram
+
 ```
-HTTP request
-  → controller (decode params/body, encode JSON, no business logic)
-  → service    (validation, business rules, entity ↔ DTO mapping)
-  → repository (persistence only, entities in/out, no DTOs or HTTP codes)
-  → MySQL (via GORM)
+Client
+  ↓
+Router (Chi Router + Middleware)
+  ↓
+Controller (Decode parameters/body, invoke service, encode JSON)
+  ↓
+Service (Validation, business rules, entity ↔ DTO mapping)
+  ↓
+Repository (Data access with GORM, returns entities and error sentinels)
+  ↓
+MySQL Database
 ```
 
-Layer rules:
+### Layer Boundaries and Rules
 
-| Layer | Package | May depend on | Must NOT contain |
+| Layer | Package | Depends on | Must NOT contain |
 |---|---|---|---|
-| HTTP | `controller/` | `service`, `payload`, `helper` | SQL, business rules |
-| Business | `service/` | `repository`, `payload`, `entities`, `helper` | `net/http`, GORM queries |
-| Persistence | `repository/` | `entities` | DTOs, HTTP codes, validation messages |
-| DTOs | `payload/` | `entities` (mappers only) | DB or HTTP logic |
-| Shared | `helper/`, `config/` | stdlib + drivers | Domain logic |
+| **HTTP** | `controller/` | `service`, `payload`, `helper` | SQL queries, business logic, direct GORM access |
+| **Business** | `service/` | `repository`, `payload`, `entities`, `helper` | HTTP-specific code (`net/http`), direct SQL queries |
+| **Persistence** | `repository/` | `entities` | DTOs, HTTP status codes, validation logic |
+| **DTOs** | `payload/` | `entities` (mappers only) | Database logic, HTTP handling |
+| **Shared** | `helper/`, `config/` | Standard library, drivers | Core business/domain logic |
 
-## Project structure
+### Project Structure
 
 ```
 .
-├── main.go                     # wiring, middleware, routes, server lifecycle
+├── main.go                     # Application entry point, dependency wiring, routes, graceful shutdown
 ├── config/
-│   └── config.go               # env Config, OpenDB pool, Migrate, CloseDB
-├── controller/
-│   └── ProductController.go    # List, GetByID, Create, Update, Delete handlers
-├── service/
-│   └── ProductService.go       # validation + entity↔DTO mapping
-├── repository/
-│   └── ProductRepository.go    # Create/FindAll/FindByID/Update/Delete entities
-├── entities/
-│   └── ProductEntity.go        # GORM Product model, table `products`
-├── payload/
-│   └── ProductPayload.go       # Create/Update requests, ProductResponse, page meta
-├── helper/
-│   ├── error.go                # AppError{Code,Message,Err} + BadRequest/NotFound/Internal
-│   └── response.go             # WriteSuccess/WriteSuccessWithMeta/WriteError envelopes
-├── .env.example
-└── go.mod / go.sum
+│   └── config.go               # Configuration loader, DB connection pool, auto-migration
+├── controller/                 # HTTP handlers (parse input, invoke service, write envelope)
+│   ├── BookController.go
+│   ├── CategoryController.go
+│   └── ProductController.go
+├── service/                    # Business logic, payload validation, DTO mapping
+│   ├── BookService.go
+│   ├── CategoryService.go
+│   └── ProductService.go
+├── repository/                 # Data persistence layer using GORM
+│   ├── BookRepository.go
+│   ├── CategoryRepository.go
+│   └── ProductRepository.go
+├── entities/                   # GORM database models
+│   ├── BookEntity.go
+│   ├── CategoryEntity.go
+│   └── ProductEntity.go
+├── payload/                    # Request/response DTOs and mappers
+│   ├── BookPayload.go
+│   ├── CategoryPayload.go
+│   └── ProductPayload.go
+├── helper/                     # Shared helpers: response envelopes, error structures, query parsers
+│   ├── error.go
+│   └── response.go
+├── docs/                       # Swagger 2.0 generated documentation (swag init)
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
+├── test/                       # Unit and integration test suites
+│   ├── controller/
+│   ├── repository/
+│   └── service/
+├── .github/workflows/          # GitHub Actions CI/CD workflows
+│   └── go-ci.yml
+├── http-client.http            # HTTP requests for testing with JetBrains / VS Code REST clients
+├── .env.example                # Sample environment variables
+├── go.mod / go.sum             # Go module dependencies
+└── README.md                   # Project documentation
 ```
+
+---
 
 ## Requirements
 
-- Go 1.25+
-- MySQL 8.x running locally or remotely
-- `curl` (for manual API checks)
+- **Go**: 1.25 or higher (tested with Go 1.26+)
+- **MySQL**: 8.0 or higher
+- **Git**: For cloning the repository
+- **curl** or **REST Client** (Postman, Thunder Client, etc.) for testing endpoints
+- *(Optional)* **Docker & Docker Compose**: For containerized database or app setup
+- *(Optional)* **swag CLI**: `github.com/swaggo/swag/cmd/swag` for generating Swagger specifications
 
-## Quickstart
+---
 
+## Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/jwjooth/Product-CRUD-API.git
+   cd golang-restful-api
+   ```
+
+2. **Download dependencies:**
+   ```bash
+   go mod download
+   # or ensure module dependencies are tidy:
+   go mod tidy
+   ```
+
+---
+
+## Environment Variables
+
+The application can read environment variables from a `.env` file in the project root or from system environment variables. The `.env` file is optional; defaults are used if values are not specified.
+
+Copy `.env.example` to `.env`:
 ```bash
-# 1. Clone and enter the repo
-git clone <repo-url>
-cd golang-restful-api
-
-# 2. Configure environment
 cp .env.example .env
-# edit .env if needed
-
-# 3. Create the database (once)
-mysql -h localhost -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS products CHARACTER SET utf8mb4;"
-
-# 4. Download modules
-go mod tidy
-
-# 5. Run
-go run .
 ```
 
-Server listens on `:6767` by default (`APP_PORT`).
+### Available Variables
 
-Verify:
-
-```bash
-curl -s http://localhost:6767/healthz
-# {"message":"ok","data":{"status":"up"}}
-
-curl -s "http://localhost:6767/api/v1/products?page=1&per_page=5"
-```
-
-Build a binary:
-
-```bash
-go vet ./...
-go build -o api .
-./api
-```
-
-## Configuration
-
-`.env` is optional. Missing file falls back to env vars/defaults (production-safe).
-
-| Variable | Default | Description |
-|---|---|---|
-| `APP_PORT` | `6767` | HTTP listen port |
-| `DB_USER` | `root` | MySQL user |
-| `DB_PASSWORD` | `` | MySQL password |
-| `DB_HOST` | `localhost` | MySQL host |
-| `DB_PORT` | `3306` | MySQL port |
-| `DB_NAME` | `products` | MySQL database |
-| `DB_MAX_IDLE_CONNS` | `10` | Connection pool idle limit |
-| `DB_MAX_OPEN_CONNS` | `100` | Connection pool open limit |
-
-Connection uses `charset=utf8mb4&parseTime=True&loc=Local`, 5 min max-idle time, 30 min max lifetime, plus a ping check on startup.
-
-## Database
-
-Schema is created via `config.Migrate` (`AutoMigrate`) on boot. Suitable for development; use versioned migrations (e.g. `golang-migrate`) for production evolution.
-
-`products` table (effective schema):
-
-```sql
-CREATE TABLE products (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(255) NOT NULL,
-  description TEXT NULL,
-  price       DOUBLE NOT NULL,
-  stock       INT NOT NULL DEFAULT 0,
-  created_at  DATETIME NULL,
-  updated_at  DATETIME NULL
-);
-```
-
-Entity (`entities/ProductEntity.go`):
-
-```go
-type ProductEntity struct {
-  ID          uint      `json:"id"`
-  Name        string    `json:"name"`
-  Description string    `json:"description"`
-  Price       float64   `json:"price"`
-  Stock       int       `json:"stock"`
-  CreatedAt   time.Time `json:"created_at"`
-  UpdatedAt   time.Time `json:"updated_at"`
-}
-```
-
-## API reference
-
-Base URL: `http://localhost:6767`
-
-- Versioned (current): `/api/v1/products`
-- Legacy (deprecated, same behavior): `/products`
-- All bodies are JSON. All responses set `Content-Type: application/json`.
-
-| Method | Path | Description | Success |
+| Variable | Type | Default | Description |
 |---|---|---|---|
-| `GET` | `/healthz` | Liveness probe | `200` |
-| `GET` | `/api/v1/products?page=&per_page=` | List products (paginated) | `200` |
-| `GET` | `/api/v1/products/{id}` | Get one product | `200` |
-| `POST` | `/api/v1/products` | Create product | `201` |
-| `PUT` | `/api/v1/products/{id}` | Full product replacement | `200` |
-| `DELETE` | `/api/v1/products/{id}` | Delete product | `200` |
+| `APP_PORT` | `string` | `6767` | Port on which the HTTP server will listen. |
+| `APP_URL` | `string` | *(empty)* | Optional base URL for Swagger documentation host & scheme (e.g. `https://api.example.com`). |
+| `DB_HOST` | `string` | `localhost` | MySQL host address. |
+| `DB_PORT` | `string` | `3306` | MySQL port. |
+| `DB_USER` | `string` | `root` | MySQL user. |
+| `DB_PASSWORD` | `string` | *(empty)* | MySQL user password. |
+| `DB_NAME` | `string` | `products` | MySQL database name. |
+| `DB_MAX_IDLE_CONNS` | `int` | `10` | Maximum number of idle connections in pool. |
+| `DB_MAX_OPEN_CONNS` | `int` | `100` | Maximum number of open connections in pool. |
 
-Pagination: `page` defaults to `1`, `per_page` defaults to `10`, capped at `100`. Invalid values fall back to defaults.
+---
 
-### Envelopes
+## Database Setup
 
-Success:
+1. **Create the MySQL Database:**
+   Connect to MySQL and create the database if it doesn't already exist:
+   ```sql
+   CREATE DATABASE IF NOT EXISTS products CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+   Or via command-line:
+   ```bash
+   mysql -h localhost -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS products CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   ```
 
-```json
-{ "message": "success", "data": {} }
+2. **Auto Migration:**
+   When the server boots up, `config.Migrate` executes GORM's `AutoMigrate` to verify and create the necessary tables.
+   > [!NOTE]
+   > For production deployments, consider utilizing versioned migration tools such as `golang-migrate`.
+
+---
+
+## Running Locally
+
+1. **Ensure MySQL is running** and credentials in `.env` match your database.
+2. **Start the application:**
+   ```bash
+   go run .
+   ```
+3. **Verify the server is running:**
+   ```bash
+   curl -i http://localhost:6767/healthz
+   ```
+   Expected response:
+   ```json
+   {
+     "message": "ok",
+     "data": {
+       "status": "up"
+     }
+   }
+   ```
+
+4. **Build a binary locally:**
+   ```bash
+   # Verify code and build binary
+   go vet ./...
+   go build -o api .
+   
+   # Run binary
+   ./api
+   ```
+
+---
+
+## Running Tests
+
+Run the test suite across all packages:
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with verbose output
+go test -v ./...
+
+# Run tests with coverage summary
+go test -cover ./...
+
+# Run specific package tests
+go test ./test/service/... -v
 ```
 
-Paginated list:
+CI workflows also run automatically on GitHub Actions for pull requests and pushes to `main` (see `.github/workflows/go-ci.yml`).
 
+---
+
+## Swagger Documentation
+
+Interactive Swagger API documentation is pre-generated and accessible via browser.
+
+- **Swagger UI URL:** [http://localhost:6767/swagger/index.html](http://localhost:6767/swagger/index.html)
+
+### Regenerating Swagger Documentation
+
+If you update controller Swagger annotations or payload structures:
+1. Install `swag` CLI if not already installed:
+   ```bash
+   go install github.com/swaggo/swag/cmd/swag@latest
+   ```
+2. Re-generate Swagger files:
+   ```bash
+   swag init -g main.go -o docs
+   ```
+
+---
+
+## Docker
+
+### Running MySQL via Docker
+
+If you do not have MySQL installed locally, run a MySQL 8 container:
+```bash
+docker run --name mysql-restful-api \
+  -e MYSQL_ROOT_PASSWORD=secret \
+  -e MYSQL_DATABASE=products \
+  -p 3306:3306 \
+  -d mysql:8.0
+```
+
+### Dockerfile for API Application
+
+Create a `Dockerfile` for containerizing the Go application:
+
+```dockerfile
+# Multi-stage build
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o api .
+
+# Final minimal image
+FROM alpine:3.20
+
+WORKDIR /app
+RUN apk --no-cache add ca-certificates tzdata
+
+COPY --from=builder /app/api /app/api
+
+EXPOSE 6767
+
+ENTRYPOINT ["/app/api"]
+```
+
+Build and run the Docker image:
+```bash
+# Build Docker image
+docker build -t golang-restful-api:latest .
+
+# Run Docker container linking to host database
+docker run -p 6767:6767 \
+  -e DB_HOST=host.docker.internal \
+  -e DB_USER=root \
+  -e DB_PASSWORD=secret \
+  -e DB_NAME=products \
+  golang-restful-api:latest
+```
+
+---
+
+## Deployment
+
+The application compiles into a single, self-contained binary that can be deployed on any server, VM, or PaaS platform (e.g. Railway, Render, Fly.io, AWS EC2 / ECS, Kubernetes).
+
+### Production Considerations
+
+1. **Environment Variables**: Never commit `.env` to version control. Set environment variables directly in your hosting platform dashboard.
+2. **Reverse Proxy & TLS**: Place the API behind Nginx, Caddy, Cloudflare, or an API gateway for HTTPS termination and rate limiting.
+3. **Database Pool Sizing**: Adjust `DB_MAX_OPEN_CONNS` and `DB_MAX_IDLE_CONNS` according to your database tier `max_connections` and instance scaling count.
+4. **App URL for Swagger**: Provide `APP_URL` (e.g., `APP_URL=https://your-domain.com`) so the Swagger UI can resolve the correct host and scheme for "Try it out" calls.
+5. **Graceful Shutdown**: The app handles `SIGINT` and `SIGTERM` signals with a 10-second drain window before terminating active connections.
+
+---
+
+## API Reference & Examples
+
+**Base URL**: `http://localhost:6767/api/v1`
+
+### Response Envelope
+
+All API endpoints return consistent JSON envelopes:
+
+#### Success Response
 ```json
 {
   "message": "success",
-  "data": [ { "id": 1, "name": "...", "price": 129.99, "stock": 48, "...": "..." } ],
-  "meta": { "page": 1, "per_page": 5, "total": 10, "total_pages": 2 }
+  "data": { ... }
 }
 ```
 
-Delete success:
-
-```json
-{ "message": "product deleted successfully" }
-```
-
-Error (all failures):
-
-```json
-{ "error": "product not found" }
-```
-
-| HTTP | Meaning | Example |
-|---|---|---|
-| `201` | Created | POST success |
-| `400` | Bad request | invalid JSON, invalid `id`, validation failure |
-| `404` | Not found | unknown product ID on get/update/delete |
-| `500` | Internal | DB failure |
-
-### Product object
-
+#### Paginated Success Response
 ```json
 {
-  "id": 12,
-  "name": "Test Keyboard",
-  "description": "smoke test",
-  "price": 99.99,
-  "stock": 10,
-  "created_at": "2026-09-11T15:58:04.028+07:00",
-  "updated_at": "2026-09-11T15:58:04.028+07:00"
+  "message": "success",
+  "data": [ ... ],
+  "meta": {
+    "page": 1,
+    "per_page": 10,
+    "total": 45,
+    "total_pages": 5
+  }
 }
 ```
 
-### Validation rules
-
-Applied in the service layer for both create and PUT:
-
-| Field | Rule |
-|---|---|
-| `name` | required, 1–255 chars |
-| `description` | optional, max 5000 chars |
-| `price` | required, `> 0` |
-| `stock` | `>= 0` (zero allowed = out of stock) |
-
-Validation failures return `400` with the first failing reason, e.g. `{"error":"Name is required"}`.
-
-### curl examples
-
-```bash
-BASE=http://localhost:6767/api/v1
-
-# List (page 1, 5 per page)
-curl -s "$BASE/products?page=1&per_page=5"
-
-# Get one
-curl -s "$BASE/products/1"
-
-# Create
-curl -s -X POST "$BASE/products" \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"USB-C GaN Charger 65W","description":"65W fast charger","price":49.9,"stock":125}'
-
-# Full update (PUT requires all fields)
-curl -s -X PUT "$BASE/products/12" \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Test Keyboard v2","description":"updated","price":119.5,"stock":5}'
-
-# Delete
-curl -s -X DELETE "$BASE/products/12"
-
-# Error cases
-curl -s "$BASE/products/abc"        # {"error":"invalid product id"}
-curl -s "$BASE/products/999999"     # {"error":"product not found"}
+#### Error Response
+```json
+{
+  "error": "description of the error"
+}
 ```
 
-## Middleware and lifecycle
+---
 
-- `RequestID`, `RealIP`, `Logger`, `Recoverer`, `Timeout(60s)` on every request
-- `ReadTimeout: 15s`, `WriteTimeout: 15s`, `IdleTimeout: 60s`
-- `SIGINT`/`SIGTERM` trigger a graceful shutdown with a 10s deadline
+### Health Check
 
-## Development
+- **Endpoint**: `GET /healthz`
+- **Description**: Verifies if the service is running.
 
 ```bash
-go mod tidy
-go vet ./...
-gofmt -l .
-go build -o /tmp/api-build .
+curl -s http://localhost:6767/healthz
 ```
 
-Conventions:
+---
 
-- Controller: parse input, call one service method, write one envelope. No `if r.Method != ...` checks (Chi routes by method).
-- Service: validate with `validator`, return `*helper.AppError`, map entities via `payload.NewProductResponse`.
-- Repository: GORM only, return `(*entities.ProductEntity, error)` / `(records, total, error)`; return `repository.ErrNotFound` when `RowsAffected == 0` or `gorm.ErrRecordNotFound`.
-- Never expose GORM models directly over HTTP; always map to `payload` DTOs.
+### Products Endpoints
 
-Adding a new resource (e.g. `orders`): copy the `entities → payload → repository → service → controller` chain, register `/api/v1/orders` in `main.go`, add `AutoMigrate(&entities.OrderEntity{})`.
+#### Summary Table
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/products?page=1&per_page=10` | List products with pagination |
+| `POST` | `/api/v1/products` | Create a new product |
+| `GET` | `/api/v1/products/{id}` | Get product by ID |
+| `PUT` | `/api/v1/products/{id}` | Update product by ID |
+| `DELETE` | `/api/v1/products/{id}` | Delete product by ID |
 
-## Deployment notes
+#### Validation Rules (Product)
+- `name`: Required, 1–255 characters.
+- `description`: Optional, max 5000 characters.
+- `price`: Required, greater than `0`.
+- `stock`: Required / default `0`, greater than or equal to `0`.
 
-- Do not require `.env` in production; inject real env vars instead.
-- Put the service behind a reverse proxy / TLS terminator for public traffic.
-- Replace `AutoMigrate` with versioned migrations if the schema is shared or long-lived.
-- Set `DB_MAX_OPEN_CONNS` according to MySQL `max_connections` and instance count.
+#### Examples
+
+**1. List Products (Paginated)**
+```bash
+curl -s "http://localhost:6767/api/v1/products?page=1&per_page=5"
+```
+
+**2. Create Product**
+```bash
+curl -s -X POST "http://localhost:6767/api/v1/products" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mechanical Keyboard RGB",
+    "description": "Tenkeyless mechanical gaming keyboard with red switches",
+    "price": 89.99,
+    "stock": 35
+  }'
+```
+
+**3. Get Product by ID**
+```bash
+curl -s "http://localhost:6767/api/v1/products/1"
+```
+
+**4. Update Product**
+```bash
+curl -s -X PUT "http://localhost:6767/api/v1/products/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mechanical Keyboard RGB v2",
+    "description": "Updated switches and wireless connectivity",
+    "price": 99.99,
+    "stock": 20
+  }'
+```
+
+**5. Delete Product**
+```bash
+curl -s -X DELETE "http://localhost:6767/api/v1/products/1"
+```
+
+---
+
+### Books Endpoints
+
+#### Summary Table
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/books?page=1&per_page=10` | List books with pagination |
+| `POST` | `/api/v1/books` | Create a new book |
+| `GET` | `/api/v1/books/{id}` | Get book by ID |
+| `PUT` | `/api/v1/books/{id}` | Update book by ID |
+| `DELETE` | `/api/v1/books/{id}` | Delete book by ID |
+
+#### Validation Rules (Book)
+- `title`: Required.
+- `category_id`: Required.
+- `author`: Required.
+- `stock`: Required.
+
+#### Examples
+
+**1. List Books**
+```bash
+curl -s "http://localhost:6767/api/v1/books?page=1&per_page=10"
+```
+
+**2. Create Book**
+```bash
+curl -s -X POST "http://localhost:6767/api/v1/books" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Clean Architecture: A Craftsman Guide to Software Structure and Design",
+    "category_id": 1,
+    "author": "Robert C. Martin",
+    "stock": 15
+  }'
+```
+
+**3. Get Book by ID**
+```bash
+curl -s "http://localhost:6767/api/v1/books/1"
+```
+
+**4. Update Book**
+```bash
+curl -s -X PUT "http://localhost:6767/api/v1/books/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Clean Architecture (2nd Edition)",
+    "category_id": 1,
+    "author": "Robert C. Martin",
+    "stock": 25
+  }'
+```
+
+**5. Delete Book**
+```bash
+curl -s -X DELETE "http://localhost:6767/api/v1/books/1"
+```
+
+---
+
+### Categories Endpoints
+
+#### Summary Table
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/categories` | List all categories (unpaginated) |
+| `POST` | `/api/v1/categories` | Create a new category |
+| `GET` | `/api/v1/categories/{id}` | Get category by ID |
+| `PUT` | `/api/v1/categories/{id}` | Update category by ID |
+| `DELETE` | `/api/v1/categories/{id}` | Delete category by ID |
+
+#### Examples
+
+**1. List All Categories**
+```bash
+curl -s "http://localhost:6767/api/v1/categories"
+```
+
+**2. Create Category**
+```bash
+curl -s -X POST "http://localhost:6767/api/v1/categories" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Technology & Programming"
+  }'
+```
+
+**3. Get Category by ID**
+```bash
+curl -s "http://localhost:6767/api/v1/categories/1"
+```
+
+**4. Update Category**
+```bash
+curl -s -X PUT "http://localhost:6767/api/v1/categories/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Computer Science & Software Engineering"
+  }'
+```
+
+**5. Delete Category**
+```bash
+curl -s -X DELETE "http://localhost:6767/api/v1/categories/1"
+```
+
+---
 
 ## License
 
-No license file is currently included. Add one (e.g. MIT) before public distribution.
+This project is licensed under the [MIT License](LICENSE) (or refer to repository settings for distribution).
