@@ -73,7 +73,7 @@ func MessageOf(err error) string {
 	return http.StatusText(http.StatusInternalServerError)
 }
 
-// Kept for backward compatibility with existing callers.
+// BaseErrorResponse Kept for backward compatibility with existing callers.
 type BaseErrorResponse = AppError
 
 func FormatValidationError(err error) string {
