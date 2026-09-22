@@ -112,7 +112,7 @@ MySQL Database
 
 ## Requirements
 
-- **Go**: 1.25 or higher (tested with Go 1.26+)
+- **Go**: 1.26 or higher
 - **MySQL**: 8.0 or higher
 - **Git**: For cloning the repository
 - **curl** or **REST Client** (Postman, Thunder Client, etc.) for testing endpoints
@@ -126,7 +126,7 @@ MySQL Database
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/jwjooth/Product-CRUD-API.git
-   cd golang-restful-api
+   cd Product-CRUD-API
    ```
 
 2. **Download dependencies:**
@@ -176,8 +176,9 @@ cp .env.example .env
    ```
 
 2. **Auto Migration:**
-   When the server boots up, `config.Migrate` executes GORM's `AutoMigrate` to verify and create the necessary tables.
-   > [!NOTE]
+   On boot, `config.Migrate` runs GORM's `AutoMigrate` for the **products** table only.
+   > [!WARNING]
+   > The `books` and `categories` tables are **not** auto-created. If you add new entities, add them to `config.Migrate` (see `config/config.go:78`) before expecting their tables to exist.
    > For production deployments, consider utilizing versioned migration tools such as `golang-migrate`.
 
 ---
@@ -542,6 +543,17 @@ curl -s -X PUT "http://localhost:6767/api/v1/categories/1" \
 ```bash
 curl -s -X DELETE "http://localhost:6767/api/v1/categories/1"
 ```
+
+---
+
+## Known Issues & Gotchas
+
+These are verified issues in the current codebase:
+
+1. **`payload.NewBookResponse` dereferences `BookEntity.CategoryId` without a nil check** (`payload/BookPayload.go:41`). If a book row has a NULL `category_id`, the server will panic. Guard before mapping or ensure `category_id` is never nullable.
+2. **`helper.ParseIDParam` always returns the error message `"invalid product id"`** (`helper/response.go:50-57`) regardless of which resource (products/books/categories) uses it. Acceptable for products, but misleading for books/categories.
+3. **`config.Migrate` migrates only `ProductEntity`** (`config/config.go:78`). Books and categories tables are not auto-created on boot.
+4. **`service/book` and `service/category` constructors** (`NewBookServiceImpl`, `NewCategoryServiceImpl`) do not accept a `*gorm.DB` argument — they take a repository interface. The old `NewProductServiceImplWithDB` signature exists for backward compatibility only and ignores its first argument.
 
 ---
 

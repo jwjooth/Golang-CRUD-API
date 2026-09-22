@@ -8,6 +8,7 @@ import (
 
 	"golang-restful-api/entities"
 	"golang-restful-api/payload"
+	"golang-restful-api/repository"
 	"golang-restful-api/service"
 
 	"github.com/stretchr/testify/assert"
@@ -111,6 +112,19 @@ func TestCategoryService_GetById(t *testing.T) {
 		assert.Equal(t, 400, appErr.Code)
 	})
 
+	t.Run("Not found", func(t *testing.T) {
+		mockRepo := new(MockCategoryRepository)
+		svc := service.NewCategoryServiceImpl(mockRepo)
+
+		mockRepo.On("GetById", mock.Anything, uint(99)).Return(nil, repository.ErrCategoryNotFound)
+
+		_, appErr := svc.GetById(context.Background(), 99)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 404, appErr.Code)
+		assert.Equal(t, "category not found", appErr.Message)
+		mockRepo.AssertExpectations(t)
+	})
+
 	t.Run("Database error", func(t *testing.T) {
 		mockRepo := new(MockCategoryRepository)
 		svc := service.NewCategoryServiceImpl(mockRepo)
@@ -184,6 +198,20 @@ func TestCategoryService_Update(t *testing.T) {
 		assert.Equal(t, 400, appErr.Code)
 	})
 
+	t.Run("Not found", func(t *testing.T) {
+		mockRepo := new(MockCategoryRepository)
+		svc := service.NewCategoryServiceImpl(mockRepo)
+
+		req := payload.CategoryRequest{Name: "Tech"}
+		mockRepo.On("GetById", mock.Anything, uint(99)).Return(nil, repository.ErrCategoryNotFound)
+
+		_, appErr := svc.Update(context.Background(), req, 99)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 404, appErr.Code)
+		assert.Equal(t, "category not found", appErr.Message)
+		mockRepo.AssertExpectations(t)
+	})
+
 	t.Run("Repository update error", func(t *testing.T) {
 		mockRepo := new(MockCategoryRepository)
 		svc := service.NewCategoryServiceImpl(mockRepo)
@@ -220,6 +248,19 @@ func TestCategoryService_Delete(t *testing.T) {
 		appErr := svc.Delete(context.Background(), 0)
 		assert.NotNil(t, appErr)
 		assert.Equal(t, 400, appErr.Code)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		mockRepo := new(MockCategoryRepository)
+		svc := service.NewCategoryServiceImpl(mockRepo)
+
+		mockRepo.On("Delete", mock.Anything, uint(99)).Return(repository.ErrCategoryNotFound)
+
+		appErr := svc.Delete(context.Background(), 99)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 404, appErr.Code)
+		assert.Equal(t, "category not found", appErr.Message)
+		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("Database error", func(t *testing.T) {

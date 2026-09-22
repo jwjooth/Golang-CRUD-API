@@ -144,6 +144,21 @@ func TestCategoryController_GetById(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
+
+	t.Run("Not found", func(t *testing.T) {
+		svc := new(MockCategoryService)
+		ctrl := controller.NewCategoryControllerImpl(svc)
+		router := setupCategoryRouter(ctrl)
+
+		svc.On("GetById", mock.Anything, uint(404)).Return(payload.CategoryResponse{}, helper.NotFound("category not found"))
+
+		req := httptest.NewRequest(http.MethodGet, "/categories/404", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		svc.AssertExpectations(t)
+	})
 }
 
 func TestCategoryController_Create(t *testing.T) {
@@ -206,6 +221,23 @@ func TestCategoryController_Update(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
+
+	t.Run("Not found", func(t *testing.T) {
+		svc := new(MockCategoryService)
+		ctrl := controller.NewCategoryControllerImpl(svc)
+		router := setupCategoryRouter(ctrl)
+
+		updateReq := payload.CategoryRequest{Name: "Romance"}
+		svc.On("Update", mock.Anything, updateReq, uint(404)).Return(payload.CategoryResponse{}, helper.NotFound("category not found"))
+
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPut, "/categories/404", bytes.NewReader(body))
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		svc.AssertExpectations(t)
+	})
 }
 
 func TestCategoryController_Delete(t *testing.T) {
@@ -234,5 +266,20 @@ func TestCategoryController_Delete(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		svc := new(MockCategoryService)
+		ctrl := controller.NewCategoryControllerImpl(svc)
+		router := setupCategoryRouter(ctrl)
+
+		svc.On("Delete", mock.Anything, uint(404)).Return(helper.NotFound("category not found"))
+
+		req := httptest.NewRequest(http.MethodDelete, "/categories/404", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		svc.AssertExpectations(t)
 	})
 }

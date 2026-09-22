@@ -180,7 +180,7 @@ func TestBookRepository_Delete(t *testing.T) {
 
 		err := repo.Delete(context.Background(), 99)
 		assert.Error(t, err)
-		assert.Equal(t, "book not found", err.Error())
+		assert.ErrorIs(t, err, repository.ErrBookNotFound)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }

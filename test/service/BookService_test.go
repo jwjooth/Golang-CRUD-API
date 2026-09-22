@@ -8,6 +8,7 @@ import (
 
 	"golang-restful-api/entities"
 	"golang-restful-api/payload"
+	"golang-restful-api/repository"
 	"golang-restful-api/service"
 
 	"github.com/stretchr/testify/assert"
@@ -124,6 +125,19 @@ func TestBookService_GetById(t *testing.T) {
 		_, appErr := svc.GetById(context.Background(), 0)
 		assert.NotNil(t, appErr)
 		assert.Equal(t, 400, appErr.Code)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		mockRepo := new(MockBookRepository)
+		svc := service.NewBookServiceImpl(mockRepo)
+
+		mockRepo.On("GetById", mock.Anything, uint(99)).Return(nil, repository.ErrBookNotFound)
+
+		_, appErr := svc.GetById(context.Background(), 99)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 404, appErr.Code)
+		assert.Equal(t, "book not found", appErr.Message)
+		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("Database error", func(t *testing.T) {
@@ -247,6 +261,20 @@ func TestBookService_Update(t *testing.T) {
 		assert.Equal(t, 400, appErr.Code)
 	})
 
+	t.Run("Not found", func(t *testing.T) {
+		mockRepo := new(MockBookRepository)
+		svc := service.NewBookServiceImpl(mockRepo)
+
+		req := payload.BookRequest{Title: "Title", CategoryID: 1, Author: "Author", Stock: 1}
+		mockRepo.On("GetById", mock.Anything, uint(99)).Return(nil, repository.ErrBookNotFound)
+
+		_, appErr := svc.Update(context.Background(), req, 99)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 404, appErr.Code)
+		assert.Equal(t, "book not found", appErr.Message)
+		mockRepo.AssertExpectations(t)
+	})
+
 	t.Run("Repository update error", func(t *testing.T) {
 		mockRepo := new(MockBookRepository)
 		svc := service.NewBookServiceImpl(mockRepo)
@@ -284,6 +312,19 @@ func TestBookService_Delete(t *testing.T) {
 		appErr := svc.Delete(context.Background(), 0)
 		assert.NotNil(t, appErr)
 		assert.Equal(t, 400, appErr.Code)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		mockRepo := new(MockBookRepository)
+		svc := service.NewBookServiceImpl(mockRepo)
+
+		mockRepo.On("Delete", mock.Anything, uint(99)).Return(repository.ErrBookNotFound)
+
+		appErr := svc.Delete(context.Background(), 99)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 404, appErr.Code)
+		assert.Equal(t, "book not found", appErr.Message)
+		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("Database error", func(t *testing.T) {

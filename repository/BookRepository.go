@@ -8,6 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// ErrBookNotFound is returned when a book row does not exist.
+var ErrBookNotFound = errors.New("book not found")
+
 type BookRepository interface {
 	GetAll(ctx context.Context, limit, offset int) ([]entities.BookEntity, int64, error)
 	Create(ctx context.Context, request *entities.BookEntity) (*entities.BookEntity, error)
@@ -33,10 +36,10 @@ func (b *BookRepositoryImpl) GetAll(ctx context.Context, limit, offset int) ([]e
 	var records []entities.BookEntity
 	query := b.db.WithContext(ctx).Order("id asc")
 	if limit > 0 {
-		query.Limit(limit)
+		query = query.Limit(limit)
 	}
 	if offset > 0 {
-		query.Offset(offset)
+		query = query.Offset(offset)
 	}
 	if err := query.Find(&records).Error; err != nil {
 		return nil, 0, err
@@ -47,6 +50,9 @@ func (b *BookRepositoryImpl) GetAll(ctx context.Context, limit, offset int) ([]e
 func (b *BookRepositoryImpl) GetById(ctx context.Context, id uint) (*entities.BookEntity, error) {
 	var book entities.BookEntity
 	if err := b.db.WithContext(ctx).First(&book, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrBookNotFound
+		}
 		return nil, err
 	}
 	return &book, nil
@@ -72,7 +78,7 @@ func (b *BookRepositoryImpl) Delete(ctx context.Context, id uint) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("book not found")
+		return ErrBookNotFound
 	}
 	return nil
 }

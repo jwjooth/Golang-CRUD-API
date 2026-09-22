@@ -1,9 +1,9 @@
 ### GET all products
-GET http://localhost:6767/api/v1/products
+GET https://product-crud-api-production-1234.up.railway.app/api/v1/products
 Accept: application/json
 
 ### GET by id product
-GET http://localhost:6767/api/v1/products/22
+GET https://product-crud-api-production-1234.up.railway.app/api/v1/products/22
 Accept: application/json
 
 ### POST product
@@ -29,10 +29,10 @@ Content-Type: application/json
 }
 
 ### DELETE by id product
-DELETE http://localhost:6767/api/v1/products/22
+DELETE http://product-crud-api-production-1234.up.railway.app/api/v1/products/22
 
 ### GET all books
-GET http://localhost:6767/api/v1/books
+GET http://product-crud-api-production-1234.up.railway.app/api/v1/books
 Accept: application/json
 
 ### GET by id book
@@ -66,3 +66,25 @@ DELETE http://localhost:6767/api/v1/books/11
 
 ### GET all categories
 GET http://localhost:6767/api/v1/categories
+
+### GET by id category
+GET http://localhost:6767/api/v1/categories/5
+
+### CREATE category
+POST http://localhost:6767/api/v1/categories
+Content-Type: application/json
+
+{
+  "name": "testing category"
+}
+
+### UPDATE by id category
+PUT http://localhost:6767/api/v1/categories/5
+Content-Type: application/json
+
+{
+  "name": "update category"
+}
+
+### DELETE by id category
+DELETE http://localhost:6767/api/v1/books/5
