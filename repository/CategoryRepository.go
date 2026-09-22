@@ -8,6 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// ErrCategoryNotFound is returned when a category row does not exist.
+var ErrCategoryNotFound = errors.New("category not found")
+
 type CategoryRepository interface {
 	GetAll(ctx context.Context) ([]entities.CategoryEntity, error)
 	GetById(ctx context.Context, id uint) (*entities.CategoryEntity, error)
@@ -43,8 +46,9 @@ func (c *CategoryRepositoryImpl) GetById(ctx context.Context, id uint) (*entitie
 	var category entities.CategoryEntity
 	if err := c.db.WithContext(ctx).First(&category, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("category not found")
+			return nil, ErrCategoryNotFound
 		}
+		return nil, err
 	}
 	return &category, nil
 }
@@ -69,7 +73,7 @@ func (c *CategoryRepositoryImpl) Delete(ctx context.Context, id uint) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("category not found")
+		return ErrCategoryNotFound
 	}
 	return nil
 }

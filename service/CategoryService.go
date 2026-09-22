@@ -45,7 +45,7 @@ func (c *CategoryServiceImpl) GetById(ctx context.Context, id uint) (payload.Cat
 	}
 	category, err := c.repository.GetById(ctx, id)
 	if err != nil {
-		if errors.Is(err, errors.New("category not found")) {
+		if errors.Is(err, repository.ErrCategoryNotFound) {
 			return payload.CategoryResponse{}, helper.NotFound("category not found")
 		}
 		return payload.CategoryResponse{}, helper.Internal("failed to fetch category", err)
@@ -80,7 +80,7 @@ func (c *CategoryServiceImpl) Update(ctx context.Context, request payload.Catego
 
 	existing, err := c.repository.GetById(ctx, id)
 	if err != nil {
-		if errors.Is(err, errors.New("category not found")) {
+		if errors.Is(err, repository.ErrCategoryNotFound) {
 			return payload.CategoryResponse{}, helper.NotFound("category not found")
 		}
 		return payload.CategoryResponse{}, helper.Internal("failed to fetch category", err)
@@ -100,7 +100,7 @@ func (c *CategoryServiceImpl) Delete(ctx context.Context, id uint) *helper.AppEr
 		return helper.BadRequest("invalid category id")
 	}
 	if err := c.repository.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("category not found")) {
+		if errors.Is(err, repository.ErrCategoryNotFound) {
 			return helper.NotFound("category not found")
 		}
 		return helper.Internal("failed to delete category", err)

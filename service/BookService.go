@@ -54,7 +54,7 @@ func (b *BookServiceImpl) GetById(ctx context.Context, id uint) (payload.BookRes
 	}
 	book, err := b.repository.GetById(ctx, id)
 	if err != nil {
-		if errors.Is(err, errors.New("book not found")) {
+		if errors.Is(err, repository.ErrBookNotFound) {
 			return payload.BookResponse{}, helper.NotFound("book not found")
 		}
 		return payload.BookResponse{}, helper.Internal("failed to fetch book", err)
@@ -91,7 +91,7 @@ func (b *BookServiceImpl) Update(ctx context.Context, request payload.BookReques
 	}
 	existing, err := b.repository.GetById(ctx, id)
 	if err != nil {
-		if errors.Is(err, errors.New("book not found")) {
+		if errors.Is(err, repository.ErrBookNotFound) {
 			return payload.BookResponse{}, helper.NotFound("book not found")
 		}
 		return payload.BookResponse{}, helper.Internal("failed to fetch book", err)
@@ -113,7 +113,7 @@ func (b *BookServiceImpl) Delete(ctx context.Context, id uint) *helper.AppError 
 		return helper.BadRequest("invalid book id")
 	}
 	if err := b.repository.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("book not found")) {
+		if errors.Is(err, repository.ErrBookNotFound) {
 			return helper.NotFound("book not found")
 		}
 		return helper.Internal("failed to delete book", err)
