@@ -71,7 +71,7 @@ func TestProductRepository_FindAll(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `product`")).
 			WillReturnRows(countRows)
 
-		productRows := sqlmock.NewRows([]string{"id", "name", "description", "price", "category", "imageUrl", "stock", "rating", "reviewCount", "sku", "createdAt", "updatedt"}).
+		productRows := sqlmock.NewRows([]string{"id", "name", "description", "price", "category", "imageUrl", "stock", "rating", "reviewCount", "sku", "createdAt", "updatedAt"}).
 			AddRow(1, "Prod 1", "Desc 1", 10.0, "Electronics", "img1.jpg", 5, 4.5, 10, "SKU001", time.Now(), time.Now()).
 			AddRow(2, "Prod 2", "Desc 2", 20.0, "Home", "img2.jpg", 8, 4.0, 5, "SKU002", time.Now(), time.Now())
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `product` ORDER BY id ASC LIMIT ?")).
