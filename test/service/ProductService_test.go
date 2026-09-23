@@ -57,6 +57,7 @@ func (m *MockProductRepository) Delete(ctx context.Context, id uint) error {
 	return args.Error(0)
 }
 
+// TestProductService_List verifies pagination, mapping, and repository errors.
 func TestProductService_List(t *testing.T) {
 	t.Run("Success with default pagination", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
@@ -103,6 +104,7 @@ func TestProductService_List(t *testing.T) {
 	})
 }
 
+// TestProductService_GetByID verifies product lookup validation and errors.
 func TestProductService_GetByID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
@@ -154,6 +156,7 @@ func TestProductService_GetByID(t *testing.T) {
 	})
 }
 
+// TestProductService_Create verifies product validation and persistence mapping.
 func TestProductService_Create(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
@@ -278,6 +281,7 @@ func TestProductService_Create(t *testing.T) {
 	})
 }
 
+// TestProductService_Update verifies product replacement validation and mapping.
 func TestProductService_Update(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)

@@ -82,6 +82,7 @@ func setupProductRouter(ctrl controller.ProductController) *chi.Mux {
 	return r
 }
 
+// TestProductController_ListProducts verifies product list responses and errors.
 func TestProductController_ListProducts(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
@@ -117,6 +118,7 @@ func TestProductController_ListProducts(t *testing.T) {
 	})
 }
 
+// TestProductController_GetProductByID verifies product lookup responses and errors.
 func TestProductController_GetProductByID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
@@ -161,6 +163,7 @@ func TestProductController_GetProductByID(t *testing.T) {
 	})
 }
 
+// TestProductController_CreateProduct verifies product creation responses and errors.
 func TestProductController_CreateProduct(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
@@ -209,6 +212,7 @@ func TestProductController_CreateProduct(t *testing.T) {
 	})
 }
 
+// TestProductController_UpdateProduct verifies product update responses and errors.
 func TestProductController_UpdateProduct(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
