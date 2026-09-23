@@ -12,6 +12,7 @@ type ProductCategoryEntity struct {
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 }
 
+// TableName specifies the table name for GORM.
 func (*ProductCategoryEntity) TableName() string {
 	return TableNameProductCategory
 }

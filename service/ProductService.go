@@ -93,7 +93,6 @@ func (s *productService) Create(ctx context.Context, req payload.CreateProductRe
 	return payload.NewProductResponse(*created), nil
 }
 
-// Update validates and replaces an existing product.
 func (s *productService) Update(ctx context.Context, id uint, req payload.UpdateProductRequest) (payload.ProductResponse, *helper.AppError) {
 	if id == 0 {
 		return payload.ProductResponse{}, helper.BadRequest("invalid product id")

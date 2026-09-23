@@ -20,6 +20,7 @@ type MockProductCategoryRepository struct {
 	mock.Mock
 }
 
+// Create records a mocked request to persist a product category.
 func (m *MockProductCategoryRepository) Create(ctx context.Context, request *entities.ProductCategoryEntity) (*entities.ProductCategoryEntity, error) {
 	args := m.Called(ctx, request)
 	if args.Get(0) == nil {
@@ -28,6 +29,7 @@ func (m *MockProductCategoryRepository) Create(ctx context.Context, request *ent
 	return args.Get(0).(*entities.ProductCategoryEntity), args.Error(1)
 }
 
+// GetAll records a mocked request to list product categories.
 func (m *MockProductCategoryRepository) GetAll(ctx context.Context) ([]entities.ProductCategoryEntity, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
@@ -36,6 +38,7 @@ func (m *MockProductCategoryRepository) GetAll(ctx context.Context) ([]entities.
 	return args.Get(0).([]entities.ProductCategoryEntity), args.Error(1)
 }
 
+// GetById records a mocked request to retrieve a product category.
 func (m *MockProductCategoryRepository) GetById(ctx context.Context, id uint) (*entities.ProductCategoryEntity, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
@@ -44,6 +47,7 @@ func (m *MockProductCategoryRepository) GetById(ctx context.Context, id uint) (*
 	return args.Get(0).(*entities.ProductCategoryEntity), args.Error(1)
 }
 
+// Update records a mocked request to persist product category changes.
 func (m *MockProductCategoryRepository) Update(ctx context.Context, request *entities.ProductCategoryEntity) (*entities.ProductCategoryEntity, error) {
 	args := m.Called(ctx, request)
 	if args.Get(0) == nil {
@@ -52,6 +56,7 @@ func (m *MockProductCategoryRepository) Update(ctx context.Context, request *ent
 	return args.Get(0).(*entities.ProductCategoryEntity), args.Error(1)
 }
 
+// Delete records a mocked request to remove a product category.
 func (m *MockProductCategoryRepository) Delete(ctx context.Context, id uint) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)

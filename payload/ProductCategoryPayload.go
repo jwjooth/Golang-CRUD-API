@@ -19,6 +19,7 @@ type ProductCategoryResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// NewProductCategoryResponse maps a product category entity to its response DTO.
 func NewProductCategoryResponse(e entities.ProductCategoryEntity) ProductCategoryResponse {
 	return ProductCategoryResponse{
 		ID:        e.ID,
@@ -29,6 +30,7 @@ func NewProductCategoryResponse(e entities.ProductCategoryEntity) ProductCategor
 	}
 }
 
+// NewProductCategoryResponses maps product category entities to response DTOs.
 func NewProductCategoryResponses(list []entities.ProductCategoryEntity) []ProductCategoryResponse {
 	out := make([]ProductCategoryResponse, 0, len(list))
 	for _, e := range list {

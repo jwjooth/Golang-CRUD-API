@@ -34,6 +34,7 @@ type ListBookResponse struct {
 	Meta ListBookMeta   `json:"meta"`
 }
 
+// NewBookResponse maps a book entity to its response DTO.
 func NewBookResponse(e entities.BookEntity) BookResponse {
 	resp := BookResponse{
 		ID:        e.ID,
