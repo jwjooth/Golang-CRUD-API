@@ -241,6 +241,23 @@ func TestProductService_Create(t *testing.T) {
 		assert.Equal(t, 400, appErr.Code)
 	})
 
+	t.Run("Validation failure - missing SKU", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		svc := service.NewProductServiceImpl(mockRepo)
+
+		req := payload.CreateProductRequest{
+			Name:  "Test",
+			Price: 100,
+			Stock: 5,
+		}
+
+		_, appErr := svc.Create(context.Background(), req)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 400, appErr.Code)
+		assert.Equal(t, "SKU is required", appErr.Message)
+		mockRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+	})
+
 	t.Run("Repository failure", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
 		svc := service.NewProductServiceImpl(mockRepo)
@@ -249,6 +266,7 @@ func TestProductService_Create(t *testing.T) {
 			Name:  "Test Item",
 			Price: 10,
 			Stock: 1,
+			SKU:   "ITEM001",
 		}
 
 		mockRepo.On("Create", mock.Anything, mock.Anything).Return(nil, errors.New("insert failed"))
@@ -307,11 +325,29 @@ func TestProductService_Update(t *testing.T) {
 		assert.Equal(t, 400, appErr.Code)
 	})
 
+	t.Run("Validation failure - missing SKU", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		svc := service.NewProductServiceImpl(mockRepo)
+
+		req := payload.UpdateProductRequest{
+			Name:  "Item",
+			Price: 10,
+			Stock: 1,
+		}
+
+		_, appErr := svc.Update(context.Background(), 1, req)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 400, appErr.Code)
+		assert.Equal(t, "SKU is required", appErr.Message)
+		mockRepo.AssertNotCalled(t, "FindByID", mock.Anything, mock.Anything)
+		mockRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
+	})
+
 	t.Run("Product not found", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
 		svc := service.NewProductServiceImpl(mockRepo)
 
-		req := payload.UpdateProductRequest{Name: "Item", Price: 10, Stock: 1}
+		req := payload.UpdateProductRequest{Name: "Item", Price: 10, Stock: 1, SKU: "ITEM001"}
 		mockRepo.On("FindByID", mock.Anything, uint(2)).Return(nil, repository.ErrNotFound)
 
 		_, appErr := svc.Update(context.Background(), 2, req)
@@ -324,7 +360,7 @@ func TestProductService_Update(t *testing.T) {
 		mockRepo := new(MockProductRepository)
 		svc := service.NewProductServiceImpl(mockRepo)
 
-		req := payload.UpdateProductRequest{Name: "Item", Price: 10, Stock: 1}
+		req := payload.UpdateProductRequest{Name: "Item", Price: 10, Stock: 1, SKU: "ITEM001"}
 		existing := &entities.ProductEntity{ID: 1, Name: "Item", Price: 10, Stock: 1}
 		mockRepo.On("FindByID", mock.Anything, uint(1)).Return(existing, nil)
 		mockRepo.On("Update", mock.Anything, existing).Return(nil, errors.New("db update error"))
