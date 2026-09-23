@@ -31,6 +31,7 @@ func NewProductCategoryServiceImpl(repo repository.ProductCategoryRepository) Pr
 	return &productCategoryService{repository: repo, validate: validator.New()}
 }
 
+// GetAll returns every product category as a response DTO.
 func (s *productCategoryService) GetAll(ctx context.Context) ([]payload.ProductCategoryResponse, *helper.AppError) {
 	records, err := s.repository.GetAll(ctx)
 	if err != nil {
@@ -39,6 +40,7 @@ func (s *productCategoryService) GetAll(ctx context.Context) ([]payload.ProductC
 	return payload.NewProductCategoryResponses(records), nil
 }
 
+// GetById validates the ID and returns the matching product category.
 func (s *productCategoryService) GetById(ctx context.Context, id uint) (payload.ProductCategoryResponse, *helper.AppError) {
 	if id == 0 {
 		return payload.ProductCategoryResponse{}, helper.BadRequest("invalid product category id")
@@ -53,6 +55,7 @@ func (s *productCategoryService) GetById(ctx context.Context, id uint) (payload.
 	return payload.NewProductCategoryResponse(*productCategory), nil
 }
 
+// Create validates and persists a new product category.
 func (s *productCategoryService) Create(ctx context.Context, req payload.ProductCategoryRequest) (payload.ProductCategoryResponse, *helper.AppError) {
 	if err := s.validate.Struct(req); err != nil {
 		return payload.ProductCategoryResponse{}, helper.BadRequest(helper.FormatValidationError(err))
@@ -70,6 +73,7 @@ func (s *productCategoryService) Create(ctx context.Context, req payload.Product
 	return payload.NewProductCategoryResponse(*created), nil
 }
 
+// Update validates and persists changes to a product category.
 func (s *productCategoryService) Update(ctx context.Context, id uint, req payload.ProductCategoryRequest) (payload.ProductCategoryResponse, *helper.AppError) {
 	if id == 0 {
 		return payload.ProductCategoryResponse{}, helper.BadRequest("invalid product category id")
@@ -96,6 +100,7 @@ func (s *productCategoryService) Update(ctx context.Context, id uint, req payloa
 	return payload.NewProductCategoryResponse(*updated), nil
 }
 
+// Delete validates the ID and removes the matching product category.
 func (s *productCategoryService) Delete(ctx context.Context, id uint) *helper.AppError {
 	if id == 0 {
 		return helper.BadRequest("invalid product category id")

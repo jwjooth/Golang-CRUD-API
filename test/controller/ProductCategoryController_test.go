@@ -21,6 +21,7 @@ type MockProductCategoryService struct {
 	mock.Mock
 }
 
+// GetAll records a mocked request to list product categories.
 func (m *MockProductCategoryService) GetAll(ctx context.Context) ([]payload.ProductCategoryResponse, *helper.AppError) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
@@ -37,6 +38,7 @@ func (m *MockProductCategoryService) GetAll(ctx context.Context) ([]payload.Prod
 	return args.Get(0).([]payload.ProductCategoryResponse), err
 }
 
+// GetById records a mocked request to retrieve a product category.
 func (m *MockProductCategoryService) GetById(ctx context.Context, id uint) (payload.ProductCategoryResponse, *helper.AppError) {
 	args := m.Called(ctx, id)
 	var err *helper.AppError
@@ -46,6 +48,7 @@ func (m *MockProductCategoryService) GetById(ctx context.Context, id uint) (payl
 	return args.Get(0).(payload.ProductCategoryResponse), err
 }
 
+// Create records a mocked request to create a product category.
 func (m *MockProductCategoryService) Create(ctx context.Context, request payload.ProductCategoryRequest) (payload.ProductCategoryResponse, *helper.AppError) {
 	args := m.Called(ctx, request)
 	var err *helper.AppError
@@ -55,6 +58,7 @@ func (m *MockProductCategoryService) Create(ctx context.Context, request payload
 	return args.Get(0).(payload.ProductCategoryResponse), err
 }
 
+// Update records a mocked request to update a product category.
 func (m *MockProductCategoryService) Update(ctx context.Context, id uint, request payload.ProductCategoryRequest) (payload.ProductCategoryResponse, *helper.AppError) {
 	args := m.Called(ctx, id, request)
 	var err *helper.AppError
@@ -64,6 +68,7 @@ func (m *MockProductCategoryService) Update(ctx context.Context, id uint, reques
 	return args.Get(0).(payload.ProductCategoryResponse), err
 }
 
+// Delete records a mocked request to delete a product category.
 func (m *MockProductCategoryService) Delete(ctx context.Context, id uint) *helper.AppError {
 	args := m.Called(ctx, id)
 	if args.Get(0) != nil {
@@ -72,6 +77,7 @@ func (m *MockProductCategoryService) Delete(ctx context.Context, id uint) *helpe
 	return nil
 }
 
+// setupProductCategoryRouter registers product category routes for controller tests.
 func setupProductCategoryRouter(ctrl controller.ProductCategoryController) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/product-categories", ctrl.GetAll)

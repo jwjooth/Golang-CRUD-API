@@ -30,6 +30,7 @@ func NewProductCategoryRepositoryImpl(db *gorm.DB) ProductCategoryRepository {
 	return &productCategoryRepository{db: db}
 }
 
+// Create persists a new product category.
 func (r *productCategoryRepository) Create(ctx context.Context, request *entities.ProductCategoryEntity) (*entities.ProductCategoryEntity, error) {
 	if err := r.db.WithContext(ctx).Create(request).Error; err != nil {
 		return nil, err
@@ -37,6 +38,7 @@ func (r *productCategoryRepository) Create(ctx context.Context, request *entitie
 	return request, nil
 }
 
+// GetAll retrieves all product categories ordered by ID.
 func (r *productCategoryRepository) GetAll(ctx context.Context) ([]entities.ProductCategoryEntity, error) {
 	if err := r.db.WithContext(ctx).Model(&entities.ProductCategoryEntity{}).Error; err != nil {
 		return nil, err
@@ -50,6 +52,7 @@ func (r *productCategoryRepository) GetAll(ctx context.Context) ([]entities.Prod
 	return records, nil
 }
 
+// GetById retrieves a product category by ID.
 func (r *productCategoryRepository) GetById(ctx context.Context, id uint) (*entities.ProductCategoryEntity, error) {
 	var productCategory entities.ProductCategoryEntity
 	if err := r.db.WithContext(ctx).First(&productCategory, id).Error; err != nil {
@@ -61,6 +64,7 @@ func (r *productCategoryRepository) GetById(ctx context.Context, id uint) (*enti
 	return &productCategory, nil
 }
 
+// Update persists changes to an existing product category.
 func (r *productCategoryRepository) Update(ctx context.Context, request *entities.ProductCategoryEntity) (*entities.ProductCategoryEntity, error) {
 	if err := r.db.WithContext(ctx).Save(request).Error; err != nil {
 		return nil, err
@@ -68,6 +72,7 @@ func (r *productCategoryRepository) Update(ctx context.Context, request *entitie
 	return request, nil
 }
 
+// Delete removes a product category by ID.
 func (r *productCategoryRepository) Delete(ctx context.Context, id uint) error {
 	result := r.db.WithContext(ctx).Delete(&entities.ProductCategoryEntity{}, id)
 	if result.Error != nil {
