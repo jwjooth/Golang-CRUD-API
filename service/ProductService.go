@@ -71,6 +71,7 @@ func (s *productService) GetByID(ctx context.Context, id uint) (payload.ProductR
 	return payload.NewProductResponse(*product), nil
 }
 
+// Create validates and persists a new product.
 func (s *productService) Create(ctx context.Context, req payload.CreateProductRequest) (payload.ProductResponse, *helper.AppError) {
 	if err := s.validate.Struct(req); err != nil {
 		return payload.ProductResponse{}, helper.BadRequest(helper.FormatValidationError(err))
@@ -81,6 +82,9 @@ func (s *productService) Create(ctx context.Context, req payload.CreateProductRe
 		Description: req.Description,
 		Price:       req.Price,
 		Stock:       req.Stock,
+		Category:    req.Category,
+		ImageUrl:    req.ImageUrl,
+		SKU:         req.SKU,
 	}
 	created, err := s.repo.Create(ctx, product)
 	if err != nil {
@@ -89,6 +93,7 @@ func (s *productService) Create(ctx context.Context, req payload.CreateProductRe
 	return payload.NewProductResponse(*created), nil
 }
 
+// Update validates and replaces an existing product.
 func (s *productService) Update(ctx context.Context, id uint, req payload.UpdateProductRequest) (payload.ProductResponse, *helper.AppError) {
 	if id == 0 {
 		return payload.ProductResponse{}, helper.BadRequest("invalid product id")
@@ -109,6 +114,9 @@ func (s *productService) Update(ctx context.Context, id uint, req payload.Update
 	existing.Description = req.Description
 	existing.Price = req.Price
 	existing.Stock = req.Stock
+	existing.Category = req.Category
+	existing.ImageUrl = req.ImageUrl
+	existing.SKU = req.SKU
 
 	updated, err := s.repo.Update(ctx, existing)
 	if err != nil {

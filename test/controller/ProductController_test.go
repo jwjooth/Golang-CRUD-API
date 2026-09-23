@@ -82,6 +82,7 @@ func setupProductRouter(ctrl controller.ProductController) *chi.Mux {
 	return r
 }
 
+// TestProductController_ListProducts verifies product list responses and errors.
 func TestProductController_ListProducts(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
@@ -89,7 +90,7 @@ func TestProductController_ListProducts(t *testing.T) {
 		router := setupProductRouter(ctrl)
 
 		expectedList := []payload.ProductResponse{
-			{ID: 1, Name: "Keyboard", Price: 100, Stock: 5},
+			{ID: 1, Name: "Keyboard", Price: 100, Stock: 5, Category: "Accessories", ImageUrl: "img.jpg", SKU: "KB001"},
 		}
 		svc.On("List", mock.Anything, 1, 10).Return(expectedList, int64(1), nil)
 
@@ -117,13 +118,14 @@ func TestProductController_ListProducts(t *testing.T) {
 	})
 }
 
+// TestProductController_GetProductByID verifies product lookup responses and errors.
 func TestProductController_GetProductByID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
 		ctrl := controller.NewProductController(svc)
 		router := setupProductRouter(ctrl)
 
-		svc.On("GetByID", mock.Anything, uint(1)).Return(payload.ProductResponse{ID: 1, Name: "Mouse"}, nil)
+		svc.On("GetByID", mock.Anything, uint(1)).Return(payload.ProductResponse{ID: 1, Name: "Mouse", Category: "Accessories", ImageUrl: "mouse.jpg", SKU: "MOUSE001"}, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/products/1", nil)
 		rec := httptest.NewRecorder()
@@ -161,14 +163,15 @@ func TestProductController_GetProductByID(t *testing.T) {
 	})
 }
 
+// TestProductController_CreateProduct verifies product creation responses and errors.
 func TestProductController_CreateProduct(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
 		ctrl := controller.NewProductController(svc)
 		router := setupProductRouter(ctrl)
 
-		createReq := payload.CreateProductRequest{Name: "Monitor", Price: 300, Stock: 4}
-		svc.On("Create", mock.Anything, createReq).Return(payload.ProductResponse{ID: 2, Name: "Monitor"}, nil)
+		createReq := payload.CreateProductRequest{Name: "Monitor", Price: 300, Stock: 4, Category: "Electronics", ImageUrl: "https://example.com/monitor.jpg", SKU: "MON001"}
+		svc.On("Create", mock.Anything, createReq).Return(payload.ProductResponse{ID: 2, Name: "Monitor", Category: "Electronics", SKU: "MON001"}, nil)
 
 		body, _ := json.Marshal(createReq)
 		req := httptest.NewRequest(http.MethodPost, "/products", bytes.NewReader(body))
@@ -209,14 +212,15 @@ func TestProductController_CreateProduct(t *testing.T) {
 	})
 }
 
+// TestProductController_UpdateProduct verifies product update responses and errors.
 func TestProductController_UpdateProduct(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		svc := new(MockProductService)
 		ctrl := controller.NewProductController(svc)
 		router := setupProductRouter(ctrl)
 
-		updateReq := payload.UpdateProductRequest{Name: "Updated Monitor", Price: 350, Stock: 5}
-		svc.On("Update", mock.Anything, uint(1), updateReq).Return(payload.ProductResponse{ID: 1, Name: "Updated Monitor"}, nil)
+		updateReq := payload.UpdateProductRequest{Name: "Updated Monitor", Price: 350, Stock: 5, Category: "Electronics", ImageUrl: "https://example.com/updated_monitor.jpg", SKU: "MON002"}
+		svc.On("Update", mock.Anything, uint(1), updateReq).Return(payload.ProductResponse{ID: 1, Name: "Updated Monitor", Category: "Electronics", SKU: "MON002"}, nil)
 
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPut, "/products/1", bytes.NewReader(body))
