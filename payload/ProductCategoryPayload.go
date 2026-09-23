@@ -7,7 +7,7 @@ import (
 )
 
 type ProductCategoryRequest struct {
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,min=1,max=255"`
 	Code string `json:"code" validate:"required,min=2,max=2"`
 }
 

@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,6 +170,17 @@ func TestProductCategoryService_Create(t *testing.T) {
 		svc := service.NewProductCategoryServiceImpl(mockRepo)
 
 		req := payload.ProductCategoryRequest{Name: "", Code: "T1"}
+
+		_, appErr := svc.Create(context.Background(), req)
+		assert.NotNil(t, appErr)
+		assert.Equal(t, 400, appErr.Code)
+	})
+
+	t.Run("Validation failure - name exceeds 255 characters", func(t *testing.T) {
+		mockRepo := new(MockProductCategoryRepository)
+		svc := service.NewProductCategoryServiceImpl(mockRepo)
+
+		req := payload.ProductCategoryRequest{Name: strings.Repeat("a", 256), Code: "T1"}
 
 		_, appErr := svc.Create(context.Background(), req)
 		assert.NotNil(t, appErr)

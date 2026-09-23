@@ -30,7 +30,15 @@ func setupMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock, *sql.DB) {
 	return gormDB, mock, sqlDB
 }
 
+<<<<<<< HEAD
 // TestProductRepository_Create verifies inserting a product into the product table.
+||||||| parent of 5bab319 (fix: correct product persistence and validation)
+=======
+func productStringPtr(value string) *string {
+	return &value
+}
+
+>>>>>>> 5bab319 (fix: correct product persistence and validation)
 func TestProductRepository_Create(t *testing.T) {
 	gormDB, mock, sqlDB := setupMockDB(t)
 	defer sqlDB.Close()
@@ -44,11 +52,17 @@ func TestProductRepository_Create(t *testing.T) {
 		Category:    "Electronics",
 		ImageUrl:    "https://example.com/mouse.jpg",
 		Stock:       10,
-		SKU:         "MOUSE001",
+		SKU:         productStringPtr("MOUSE001"),
 	}
 
 	mock.ExpectBegin()
+<<<<<<< HEAD
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `product` (`name`,`description`,`price`,`category`,`imageUrl`,`stock`,`rating`,`reviewCount`,`sku`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)")).
+||||||| parent of 5bab319 (fix: correct product persistence and validation)
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `products` (`name`,`description`,`price`,`category`,`imageUrl`,`stock`,`rating`,`reviewCount`,`sku`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)")).
+=======
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `products` (`name`,`description`,`price`,`category`,`imageUrl`,`stock`,`rating`,`reviewCount`,`sku`,`created_at`,`updated_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?)")).
+>>>>>>> 5bab319 (fix: correct product persistence and validation)
 		WithArgs(product.Name, product.Description, product.Price, product.Category, product.ImageUrl, product.Stock, product.Rating, product.ReviewCount, product.SKU, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
@@ -157,11 +171,17 @@ func TestProductRepository_Update(t *testing.T) {
 		Stock:       15,
 		Rating:      4.5,
 		ReviewCount: 12,
-		SKU:         "MOUSE002",
+		SKU:         productStringPtr("MOUSE002"),
 	}
 
 	mock.ExpectBegin()
+<<<<<<< HEAD
 	mock.ExpectExec(regexp.QuoteMeta("UPDATE `product` SET `name`=?,`description`=?,`price`=?,`category`=?,`imageUrl`=?,`stock`=?,`rating`=?,`reviewCount`=?,`sku`=?,`createdAt`=?,`updatedAt`=? WHERE `id` = ?")).
+||||||| parent of 5bab319 (fix: correct product persistence and validation)
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE `products` SET `name`=?,`description`=?,`price`=?,`category`=?,`imageUrl`=?,`stock`=?,`rating`=?,`reviewCount`=?,`sku`=?,`createdAt`=?,`updatedAt`=? WHERE `id` = ?")).
+=======
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE `products` SET `name`=?,`description`=?,`price`=?,`category`=?,`imageUrl`=?,`stock`=?,`rating`=?,`reviewCount`=?,`sku`=?,`created_at`=?,`updated_at`=? WHERE `id` = ?")).
+>>>>>>> 5bab319 (fix: correct product persistence and validation)
 		WithArgs(product.Name, product.Description, product.Price, product.Category, product.ImageUrl, product.Stock, product.Rating, product.ReviewCount, product.SKU, sqlmock.AnyArg(), sqlmock.AnyArg(), product.ID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()

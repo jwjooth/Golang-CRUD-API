@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func productServiceStringPtr(value string) *string {
+	return &value
+}
 
 // MockProductRepository is a mock implementation of repository.ProductRepository
 type MockProductRepository struct {
@@ -64,8 +69,8 @@ func TestProductService_List(t *testing.T) {
 		svc := service.NewProductServiceImpl(mockRepo)
 
 		expectedList := []entities.ProductEntity{
-			{ID: 1, Name: "Product 1", Price: 100, Stock: 10, Category: "Electronics", ImageUrl: "img1.jpg", SKU: "SKU001", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{ID: 2, Name: "Product 2", Price: 200, Stock: 5, Category: "Home", ImageUrl: "img2.jpg", SKU: "SKU002", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{ID: 1, Name: "Product 1", Price: 100, Stock: 10, Category: "Electronics", ImageUrl: "img1.jpg", SKU: productServiceStringPtr("SKU001"), CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{ID: 2, Name: "Product 2", Price: 200, Stock: 5, Category: "Home", ImageUrl: "img2.jpg", SKU: productServiceStringPtr("SKU002"), CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		}
 
 		mockRepo.On("FindAll", mock.Anything, 10, 0).Return(expectedList, int64(2), nil)
@@ -110,7 +115,7 @@ func TestProductService_GetByID(t *testing.T) {
 		mockRepo := new(MockProductRepository)
 		svc := service.NewProductServiceImpl(mockRepo)
 
-		entity := &entities.ProductEntity{ID: 1, Name: "Gadget", Price: 50, Stock: 2, Category: "Electronics", ImageUrl: "img.jpg", SKU: "SKU001"}
+		entity := &entities.ProductEntity{ID: 1, Name: "Gadget", Price: 50, Stock: 2, Category: "Electronics", ImageUrl: "img.jpg", SKU: productServiceStringPtr("SKU001")}
 		mockRepo.On("FindByID", mock.Anything, uint(1)).Return(entity, nil)
 
 		res, appErr := svc.GetByID(context.Background(), 1)
@@ -180,11 +185,12 @@ func TestProductService_Create(t *testing.T) {
 			Stock:       req.Stock,
 			Category:    req.Category,
 			ImageUrl:    req.ImageUrl,
-			SKU:         req.SKU,
+			SKU:         productServiceStringPtr(req.SKU),
 		}
 
 		mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *entities.ProductEntity) bool {
-			return p.Name == req.Name && p.Price == req.Price && p.Category == req.Category
+			return p.Name == req.Name && p.Price == req.Price && p.Category == req.Category &&
+				p.SKU != nil && *p.SKU == req.SKU
 		})).Return(createdEntity, nil)
 
 		res, appErr := svc.Create(context.Background(), req)
@@ -194,6 +200,42 @@ func TestProductService_Create(t *testing.T) {
 		assert.Equal(t, "Electronics", res.Category)
 		mockRepo.AssertExpectations(t)
 	})
+
+	t.Run("Empty SKU is stored as nil", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		svc := service.NewProductServiceImpl(mockRepo)
+		req := payload.CreateProductRequest{Name: "No SKU", Price: 10, Stock: 1}
+		created := &entities.ProductEntity{ID: 11, Name: req.Name, Price: req.Price, Stock: req.Stock}
+
+		mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *entities.ProductEntity) bool {
+			return p.SKU == nil
+		})).Return(created, nil)
+
+		res, appErr := svc.Create(context.Background(), req)
+		assert.Nil(t, appErr)
+		assert.Empty(t, res.SKU)
+		mockRepo.AssertExpectations(t)
+	})
+
+	for _, tc := range []struct {
+		name     string
+		imageURL string
+	}{
+		{name: "invalid URL", imageURL: "://invalid"},
+		{name: "non-web scheme", imageURL: "ftp://example.com/image.jpg"},
+		{name: "too long", imageURL: "https://example.com/" + strings.Repeat("a", 2049)},
+	} {
+		t.Run("Validation failure - image URL "+tc.name, func(t *testing.T) {
+			mockRepo := new(MockProductRepository)
+			svc := service.NewProductServiceImpl(mockRepo)
+			req := payload.CreateProductRequest{Name: "Test", Price: 10, Stock: 1, ImageUrl: tc.imageURL}
+
+			_, appErr := svc.Create(context.Background(), req)
+			assert.NotNil(t, appErr)
+			assert.Equal(t, 400, appErr.Code)
+			mockRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+		})
+	}
 
 	t.Run("Validation failure - empty name", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
@@ -297,11 +339,13 @@ func TestProductService_Update(t *testing.T) {
 			SKU:         "KB001",
 		}
 
-		existing := &entities.ProductEntity{ID: 1, Name: "Old Keyboard", Price: 100, Stock: 5, Category: "Accessories", ImageUrl: "old.jpg", SKU: "KBold"}
-		updated := &entities.ProductEntity{ID: 1, Name: req.Name, Description: req.Description, Price: req.Price, Stock: req.Stock, Category: req.Category, ImageUrl: req.ImageUrl, SKU: req.SKU}
+		existing := &entities.ProductEntity{ID: 1, Name: "Old Keyboard", Price: 100, Stock: 5, Category: "Accessories", ImageUrl: "old.jpg", SKU: productServiceStringPtr("KBold")}
+		updated := &entities.ProductEntity{ID: 1, Name: req.Name, Description: req.Description, Price: req.Price, Stock: req.Stock, Category: req.Category, ImageUrl: req.ImageUrl, SKU: productServiceStringPtr(req.SKU)}
 
 		mockRepo.On("FindByID", mock.Anything, uint(1)).Return(existing, nil)
-		mockRepo.On("Update", mock.Anything, existing).Return(updated, nil)
+		mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *entities.ProductEntity) bool {
+			return p.SKU != nil && *p.SKU == req.SKU
+		})).Return(updated, nil)
 
 		res, appErr := svc.Update(context.Background(), 1, req)
 		assert.Nil(t, appErr)
@@ -310,6 +354,44 @@ func TestProductService_Update(t *testing.T) {
 		assert.Equal(t, "Accessories", res.Category)
 		mockRepo.AssertExpectations(t)
 	})
+
+	t.Run("Empty SKU is stored as nil", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		svc := service.NewProductServiceImpl(mockRepo)
+		req := payload.UpdateProductRequest{Name: "No SKU", Price: 10, Stock: 1}
+		existing := &entities.ProductEntity{ID: 1, Name: "Old", Price: 10, Stock: 1, SKU: productServiceStringPtr("OLD")}
+		updated := &entities.ProductEntity{ID: 1, Name: req.Name, Price: req.Price, Stock: req.Stock}
+
+		mockRepo.On("FindByID", mock.Anything, uint(1)).Return(existing, nil)
+		mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *entities.ProductEntity) bool {
+			return p.SKU == nil
+		})).Return(updated, nil)
+
+		res, appErr := svc.Update(context.Background(), 1, req)
+		assert.Nil(t, appErr)
+		assert.Empty(t, res.SKU)
+		mockRepo.AssertExpectations(t)
+	})
+
+	for _, tc := range []struct {
+		name     string
+		imageURL string
+	}{
+		{name: "invalid URL", imageURL: "://invalid"},
+		{name: "non-web scheme", imageURL: "ftp://example.com/image.jpg"},
+		{name: "too long", imageURL: "https://example.com/" + strings.Repeat("a", 2049)},
+	} {
+		t.Run("Validation failure - image URL "+tc.name, func(t *testing.T) {
+			mockRepo := new(MockProductRepository)
+			svc := service.NewProductServiceImpl(mockRepo)
+			req := payload.UpdateProductRequest{Name: "Test", Price: 10, Stock: 1, ImageUrl: tc.imageURL}
+
+			_, appErr := svc.Update(context.Background(), 1, req)
+			assert.NotNil(t, appErr)
+			assert.Equal(t, 400, appErr.Code)
+			mockRepo.AssertNotCalled(t, "FindByID", mock.Anything, mock.Anything)
+		})
+	}
 
 	t.Run("Invalid ID (0)", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)

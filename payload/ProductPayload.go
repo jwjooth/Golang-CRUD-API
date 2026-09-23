@@ -29,8 +29,16 @@ type CreateProductRequest struct {
 	Price       float64 `json:"price" validate:"required,gt=0"`
 	Stock       int     `json:"stock" validate:"gte=0"`
 	Category    string  `json:"category,omitempty" validate:"max=50"`
+<<<<<<< HEAD
 	ImageUrl    string  `json:"imageUrl,omitempty"`
 	SKU         string  `json:"sku" validate:"required,max=50"`
+||||||| parent of 5bab319 (fix: correct product persistence and validation)
+	ImageUrl    string  `json:"imageUrl,omitempty"`
+	SKU         string  `json:"sku,omitempty" validate:"max=50"`
+=======
+	ImageUrl    string  `json:"imageUrl,omitempty" validate:"omitempty,http_url,max=2048"`
+	SKU         string  `json:"sku,omitempty" validate:"max=50"`
+>>>>>>> 5bab319 (fix: correct product persistence and validation)
 }
 
 // UpdateProductRequest is the inbound DTO for PUT /products/{id} (full replace).
@@ -40,8 +48,16 @@ type UpdateProductRequest struct {
 	Price       float64 `json:"price" validate:"required,gt=0"`
 	Stock       int     `json:"stock" validate:"gte=0"`
 	Category    string  `json:"category,omitempty" validate:"max=50"`
+<<<<<<< HEAD
 	ImageUrl    string  `json:"imageUrl,omitempty"`
 	SKU         string  `json:"sku" validate:"required,max=50"`
+||||||| parent of 5bab319 (fix: correct product persistence and validation)
+	ImageUrl    string  `json:"imageUrl,omitempty"`
+	SKU         string  `json:"sku,omitempty" validate:"max=50"`
+=======
+	ImageUrl    string  `json:"imageUrl,omitempty" validate:"omitempty,http_url,max=2048"`
+	SKU         string  `json:"sku,omitempty" validate:"max=50"`
+>>>>>>> 5bab319 (fix: correct product persistence and validation)
 }
 
 // ListProductsMeta carries pagination metadata.
@@ -60,6 +76,11 @@ type ListProductsResponse struct {
 
 // NewProductResponse maps an entity to its response DTO.
 func NewProductResponse(e entities.ProductEntity) ProductResponse {
+	sku := ""
+	if e.SKU != nil {
+		sku = *e.SKU
+	}
+
 	return ProductResponse{
 		ID:          e.ID,
 		Name:        e.Name,
@@ -70,7 +91,7 @@ func NewProductResponse(e entities.ProductEntity) ProductResponse {
 		Stock:       e.Stock,
 		Rating:      e.Rating,
 		ReviewCount: e.ReviewCount,
-		SKU:         e.SKU,
+		SKU:         sku,
 		CreatedAt:   e.CreatedAt,
 		UpdatedAt:   e.UpdatedAt,
 	}
