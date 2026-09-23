@@ -35,15 +35,18 @@ type ListBookResponse struct {
 }
 
 func NewBookResponse(e entities.BookEntity) BookResponse {
-	return BookResponse{
-		ID:         e.ID,
-		Title:      e.Title,
-		CategoryID: *e.CategoryId,
-		Author:     e.Author,
-		Stock:      e.Stock,
-		CreatedAt:  e.CreatedAt,
-		UpdatedAt:  e.UpdatedAt,
+	resp := BookResponse{
+		ID:        e.ID,
+		Title:     e.Title,
+		Author:    e.Author,
+		Stock:     e.Stock,
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
 	}
+	if e.CategoryId != nil {
+		resp.CategoryID = *e.CategoryId
+	}
+	return resp
 }
 
 func NewBookResponses(list []entities.BookEntity) []BookResponse {

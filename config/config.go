@@ -75,7 +75,7 @@ func OpenDB(cfg Config) (*gorm.DB, error) {
 // Migrate runs AutoMigrate for all entities. Safe for dev; use versioned
 // migrations (golang-migrate) for production schema evolution.
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(&entities.ProductEntity{})
+	return db.AutoMigrate(&entities.ProductEntity{}, &entities.BookEntity{}, &entities.CategoryEntity{}, &entities.ProductCategoryEntity{})
 }
 
 // CloseDB closes the underlying sql.DB connection.

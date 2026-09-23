@@ -28,7 +28,7 @@ import (
 
 // @title Golang RESTful API
 // @version 1.0.0
-// @description API documentation for the Golang RESTful API with Product, Book, and Category CRUD operations
+// @description API documentation for the Golang RESTful API with Product, Book, Category, and ProductCategory CRUD operations
 // @BasePath /api/v1
 func main() {
 	// .env is optional: missing file must not crash production.
@@ -84,6 +84,11 @@ func main() {
 	categoryService := service.NewCategoryServiceImpl(categoryRepo)
 	categoryController := controller.NewCategoryControllerImpl(categoryService)
 
+	//product-category
+	productCategoryRepo := repository.NewProductCategoryRepositoryImpl(db)
+	productCategoryService := service.NewProductCategoryServiceImpl(productCategoryRepo)
+	productCategoryController := controller.NewProductCategoryController(productCategoryService)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/products", func(r chi.Router) {
 			r.Get("/", productController.ListProducts)
@@ -105,6 +110,13 @@ func main() {
 			r.Get("/{id}", categoryController.GetById)
 			r.Put("/{id}", categoryController.Update)
 			r.Delete("/{id}", categoryController.Delete)
+		})
+		r.Route("/product-categories", func(r chi.Router) {
+			r.Get("/", productCategoryController.GetAll)
+			r.Post("/", productCategoryController.Create)
+			r.Get("/{id}", productCategoryController.GetById)
+			r.Put("/{id}", productCategoryController.Update)
+			r.Delete("/{id}", productCategoryController.Delete)
 		})
 	})
 
