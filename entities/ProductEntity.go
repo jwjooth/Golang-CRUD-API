@@ -2,8 +2,10 @@ package entities
 
 import "time"
 
-const TableNameProduct = "products"
+// TableNameProduct is the database table used for product records.
+const TableNameProduct = "product"
 
+// ProductEntity is the persistence model for the product table.
 type ProductEntity struct {
 	ID          uint      `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	Name        string    `gorm:"column:name;size:255;not null" json:"name"`
@@ -19,6 +21,7 @@ type ProductEntity struct {
 	UpdatedAt   time.Time `gorm:"column:updatedAt;autoUpdateTime" json:"updated_at"`
 }
 
+// TableName specifies the product table name for GORM.
 func (*ProductEntity) TableName() string {
 	return TableNameProduct
 }
