@@ -12,7 +12,12 @@ type ProductResponse struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Price       float64   `json:"price"`
+	Category    string    `json:"category"`
+	ImageUrl    string    `json:"imageUrl"`
 	Stock       int       `json:"stock"`
+	Rating      float64   `json:"rating"`
+	ReviewCount int       `json:"reviewCount"`
+	SKU         string    `json:"sku"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -23,6 +28,9 @@ type CreateProductRequest struct {
 	Description string  `json:"description,omitempty" validate:"max=5000"`
 	Price       float64 `json:"price" validate:"required,gt=0"`
 	Stock       int     `json:"stock" validate:"gte=0"`
+	Category    string  `json:"category,omitempty" validate:"max=50"`
+	ImageUrl    string  `json:"imageUrl,omitempty"`
+	SKU         string  `json:"sku,omitempty" validate:"max=50"`
 }
 
 // UpdateProductRequest is the inbound DTO for PUT /products/{id} (full replace).
@@ -31,6 +39,9 @@ type UpdateProductRequest struct {
 	Description string  `json:"description,omitempty" validate:"max=5000"`
 	Price       float64 `json:"price" validate:"required,gt=0"`
 	Stock       int     `json:"stock" validate:"gte=0"`
+	Category    string  `json:"category,omitempty" validate:"max=50"`
+	ImageUrl    string  `json:"imageUrl,omitempty"`
+	SKU         string  `json:"sku,omitempty" validate:"max=50"`
 }
 
 // ListProductsMeta carries pagination metadata.
@@ -54,7 +65,12 @@ func NewProductResponse(e entities.ProductEntity) ProductResponse {
 		Name:        e.Name,
 		Description: e.Description,
 		Price:       e.Price,
+		Category:    e.Category,
+		ImageUrl:    e.ImageUrl,
 		Stock:       e.Stock,
+		Rating:      e.Rating,
+		ReviewCount: e.ReviewCount,
+		SKU:         e.SKU,
 		CreatedAt:   e.CreatedAt,
 		UpdatedAt:   e.UpdatedAt,
 	}

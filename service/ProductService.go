@@ -81,6 +81,9 @@ func (s *productService) Create(ctx context.Context, req payload.CreateProductRe
 		Description: req.Description,
 		Price:       req.Price,
 		Stock:       req.Stock,
+		Category:    req.Category,
+		ImageUrl:    req.ImageUrl,
+		SKU:         req.SKU,
 	}
 	created, err := s.repo.Create(ctx, product)
 	if err != nil {
@@ -109,6 +112,9 @@ func (s *productService) Update(ctx context.Context, id uint, req payload.Update
 	existing.Description = req.Description
 	existing.Price = req.Price
 	existing.Stock = req.Stock
+	existing.Category = req.Category
+	existing.ImageUrl = req.ImageUrl
+	existing.SKU = req.SKU
 
 	updated, err := s.repo.Update(ctx, existing)
 	if err != nil {
