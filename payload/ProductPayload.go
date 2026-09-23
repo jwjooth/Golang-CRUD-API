@@ -30,7 +30,7 @@ type CreateProductRequest struct {
 	Stock       int     `json:"stock" validate:"gte=0"`
 	Category    string  `json:"category,omitempty" validate:"max=50"`
 	ImageUrl    string  `json:"imageUrl,omitempty"`
-	SKU         string  `json:"sku,omitempty" validate:"max=50"`
+	SKU         string  `json:"sku" validate:"required,max=50"`
 }
 
 // UpdateProductRequest is the inbound DTO for PUT /products/{id} (full replace).
@@ -41,7 +41,7 @@ type UpdateProductRequest struct {
 	Stock       int     `json:"stock" validate:"gte=0"`
 	Category    string  `json:"category,omitempty" validate:"max=50"`
 	ImageUrl    string  `json:"imageUrl,omitempty"`
-	SKU         string  `json:"sku,omitempty" validate:"max=50"`
+	SKU         string  `json:"sku" validate:"required,max=50"`
 }
 
 // ListProductsMeta carries pagination metadata.
