@@ -88,3 +88,6 @@ Content-Type: application/json
 
 ### DELETE by id category
 DELETE http://localhost:6767/api/v1/books/5
+
+### TEST
+GET http://localhost:6767/api/v1/products

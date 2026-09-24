@@ -472,6 +472,229 @@ const docTemplate = `{
                 }
             }
         },
+        "/product-categories": {
+            "get": {
+                "description": "Retrieve a list of all product categories",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product-category"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/payload.ProductCategoryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new product category with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product-category"
+                ],
+                "parameters": [
+                    {
+                        "description": "Product category request payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/payload.ProductCategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/payload.ProductCategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/product-categories/{id}": {
+            "get": {
+                "description": "Retrieve a single product category by its unique ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product-category"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payload.ProductCategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing product category by its ID with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product-category"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Product category update payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/payload.ProductCategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payload.ProductCategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a product category by its unique ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product-category"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helper.ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/products": {
             "get": {
                 "description": "Retrieve a paginated list of all products",
@@ -797,9 +1020,16 @@ const docTemplate = `{
                 "price"
             ],
             "properties": {
+                "category": {
+                    "type": "string",
+                    "maxLength": 50
+                },
                 "description": {
                     "type": "string",
                     "maxLength": 5000
+                },
+                "imageUrl": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string",
@@ -808,6 +1038,10 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number"
+                },
+                "sku": {
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "stock": {
                     "type": "integer",
@@ -877,9 +1111,49 @@ const docTemplate = `{
                 }
             }
         },
+        "payload.ProductCategoryRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 2,
+                    "minLength": 2
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "payload.ProductCategoryResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "payload.ProductResponse": {
             "type": "object",
             "properties": {
+                "category": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -889,11 +1163,23 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "imageUrl": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
                 "price": {
                     "type": "number"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "reviewCount": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
                 },
                 "stock": {
                     "type": "integer"
@@ -910,9 +1196,16 @@ const docTemplate = `{
                 "price"
             ],
             "properties": {
+                "category": {
+                    "type": "string",
+                    "maxLength": 50
+                },
                 "description": {
                     "type": "string",
                     "maxLength": 5000
+                },
+                "imageUrl": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string",
@@ -921,6 +1214,10 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number"
+                },
+                "sku": {
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "stock": {
                     "type": "integer",
@@ -938,7 +1235,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Golang RESTful API",
-	Description:      "API documentation for the Golang RESTful API with Product, Book, and Category CRUD operations",
+	Description:      "API documentation for the Golang RESTful API with Product, Book, Category, and ProductCategory CRUD operations",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

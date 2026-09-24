@@ -47,11 +47,12 @@ func WriteAppError(w http.ResponseWriter, err error) {
 	WriteError(w, CodeOf(err), MessageOf(err))
 }
 
+// ParseIDParam parses a positive unsigned ID from a route parameter.
 func ParseIDParam(r *http.Request, key string) (uint, *AppError) {
 	raw := chi.URLParam(r, key)
 	n, err := strconv.ParseUint(raw, 10, 32)
 	if err != nil || n == 0 {
-		return 0, BadRequest("invalid product id")
+		return 0, BadRequest("invalid id")
 	}
 	return uint(n), nil
 }
