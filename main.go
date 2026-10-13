@@ -28,7 +28,7 @@ import (
 
 // @title Golang RESTful API
 // @version 1.0.0
-// @description API documentation for the Golang RESTful API with Product, Book, Category, and ProductCategory CRUD operations
+// @description API documentation for the Golang Product RESTful API
 // @BasePath /api/v1
 func main() {
 	// .env is optional: missing file must not crash production.
@@ -74,21 +74,6 @@ func main() {
 	productService := service.NewProductServiceImpl(productRepo)
 	productController := controller.NewProductController(productService)
 
-	//book
-	bookRepo := repository.NewBookRepositoryImpl(db)
-	bookService := service.NewBookServiceImpl(bookRepo)
-	bookController := controller.NewBookControllerImpl(bookService)
-
-	//category
-	categoryRepo := repository.NewCategoryRepositoryImpl(db)
-	categoryService := service.NewCategoryServiceImpl(categoryRepo)
-	categoryController := controller.NewCategoryControllerImpl(categoryService)
-
-	//product-category
-	productCategoryRepo := repository.NewProductCategoryRepositoryImpl(db)
-	productCategoryService := service.NewProductCategoryServiceImpl(productCategoryRepo)
-	productCategoryController := controller.NewProductCategoryController(productCategoryService)
-
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/products", func(r chi.Router) {
 			r.Get("/", productController.ListProducts)
@@ -96,27 +81,6 @@ func main() {
 			r.Get("/{id}", productController.GetProductByID)
 			r.Put("/{id}", productController.UpdateProduct)
 			r.Delete("/{id}", productController.DeleteProduct)
-		})
-		r.Route("/books", func(r chi.Router) {
-			r.Get("/", bookController.GetAll)
-			r.Post("/", bookController.Create)
-			r.Get("/{id}", bookController.GetById)
-			r.Put("/{id}", bookController.Update)
-			r.Delete("/{id}", bookController.Delete)
-		})
-		r.Route("/categories", func(r chi.Router) {
-			r.Get("/", categoryController.GetAll)
-			r.Post("/", categoryController.Create)
-			r.Get("/{id}", categoryController.GetById)
-			r.Put("/{id}", categoryController.Update)
-			r.Delete("/{id}", categoryController.Delete)
-		})
-		r.Route("/product-categories", func(r chi.Router) {
-			r.Get("/", productCategoryController.GetAll)
-			r.Post("/", productCategoryController.Create)
-			r.Get("/{id}", productCategoryController.GetById)
-			r.Put("/{id}", productCategoryController.Update)
-			r.Delete("/{id}", productCategoryController.Delete)
 		})
 	})
 

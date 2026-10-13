@@ -1,6 +1,6 @@
-# Golang RESTful API
+# Golang Product RESTful API
 
-Clean-architecture RESTful API built with Go, Chi router, and GORM (MySQL). Implements CRUD operations for Products, Books, and Categories with strict layer boundaries, request validation, consistent JSON responses, pagination, Swagger documentation, and automated CI/CD.
+Clean-architecture RESTful API built with Go, Chi router, and GORM (MySQL). Implements CRUD operations for Products with strict layer boundaries, request validation, consistent JSON responses, pagination, Swagger documentation, and automated CI/CD.
 
 ---
 
@@ -24,8 +24,6 @@ Clean-architecture RESTful API built with Go, Chi router, and GORM (MySQL). Impl
   - [Response Envelope](#response-envelope)
   - [Health Check](#health-check)
   - [Products Endpoints](#products-endpoints)
-  - [Books Endpoints](#books-endpoints)
-  - [Categories Endpoints](#categories-endpoints)
 - [License](#license)
 
 ---
@@ -70,24 +68,14 @@ MySQL Database
 ├── config/
 │   └── config.go               # Configuration loader, DB connection pool, auto-migration
 ├── controller/                 # HTTP handlers (parse input, invoke service, write envelope)
-│   ├── BookController.go
-│   ├── CategoryController.go
 │   └── ProductController.go
 ├── service/                    # Business logic, payload validation, DTO mapping
-│   ├── BookService.go
-│   ├── CategoryService.go
 │   └── ProductService.go
 ├── repository/                 # Data persistence layer using GORM
-│   ├── BookRepository.go
-│   ├── CategoryRepository.go
 │   └── ProductRepository.go
 ├── entities/                   # GORM database models
-│   ├── BookEntity.go
-│   ├── CategoryEntity.go
 │   └── ProductEntity.go
 ├── payload/                    # Request/response DTOs and mappers
-│   ├── BookPayload.go
-│   ├── CategoryPayload.go
 │   └── ProductPayload.go
 ├── helper/                     # Shared helpers: response envelopes, error structures, query parsers
 │   ├── error.go
@@ -176,9 +164,7 @@ cp .env.example .env
    ```
 
 2. **Auto Migration:**
-   On boot, `config.Migrate` runs GORM's `AutoMigrate` for the **products** table only.
-   > [!WARNING]
-   > The `books` and `categories` tables are **not** auto-created. If you add new entities, add them to `config.Migrate` (see `config/config.go:78`) before expecting their tables to exist.
+   On boot, `config.Migrate` runs GORM's `AutoMigrate` for the **products** table. If you add new entities, add them to `config.Migrate` (see `config/config.go`) before expecting their tables to exist.
    > For production deployments, consider utilizing versioned migration tools such as `golang-migrate`.
 
 ---
@@ -435,125 +421,6 @@ curl -s -X PUT "http://localhost:6767/api/v1/products/1" \
 ```bash
 curl -s -X DELETE "http://localhost:6767/api/v1/products/1"
 ```
-
----
-
-### Books Endpoints
-
-#### Summary Table
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/books?page=1&per_page=10` | List books with pagination |
-| `POST` | `/api/v1/books` | Create a new book |
-| `GET` | `/api/v1/books/{id}` | Get book by ID |
-| `PUT` | `/api/v1/books/{id}` | Update book by ID |
-| `DELETE` | `/api/v1/books/{id}` | Delete book by ID |
-
-#### Validation Rules (Book)
-- `title`: Required.
-- `category_id`: Required.
-- `author`: Required.
-- `stock`: Required.
-
-#### Examples
-
-**1. List Books**
-```bash
-curl -s "http://localhost:6767/api/v1/books?page=1&per_page=10"
-```
-
-**2. Create Book**
-```bash
-curl -s -X POST "http://localhost:6767/api/v1/books" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Clean Architecture: A Craftsman Guide to Software Structure and Design",
-    "category_id": 1,
-    "author": "Robert C. Martin",
-    "stock": 15
-  }'
-```
-
-**3. Get Book by ID**
-```bash
-curl -s "http://localhost:6767/api/v1/books/1"
-```
-
-**4. Update Book**
-```bash
-curl -s -X PUT "http://localhost:6767/api/v1/books/1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Clean Architecture (2nd Edition)",
-    "category_id": 1,
-    "author": "Robert C. Martin",
-    "stock": 25
-  }'
-```
-
-**5. Delete Book**
-```bash
-curl -s -X DELETE "http://localhost:6767/api/v1/books/1"
-```
-
----
-
-### Categories Endpoints
-
-#### Summary Table
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/categories` | List all categories (unpaginated) |
-| `POST` | `/api/v1/categories` | Create a new category |
-| `GET` | `/api/v1/categories/{id}` | Get category by ID |
-| `PUT` | `/api/v1/categories/{id}` | Update category by ID |
-| `DELETE` | `/api/v1/categories/{id}` | Delete category by ID |
-
-#### Examples
-
-**1. List All Categories**
-```bash
-curl -s "http://localhost:6767/api/v1/categories"
-```
-
-**2. Create Category**
-```bash
-curl -s -X POST "http://localhost:6767/api/v1/categories" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Technology & Programming"
-  }'
-```
-
-**3. Get Category by ID**
-```bash
-curl -s "http://localhost:6767/api/v1/categories/1"
-```
-
-**4. Update Category**
-```bash
-curl -s -X PUT "http://localhost:6767/api/v1/categories/1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Computer Science & Software Engineering"
-  }'
-```
-
-**5. Delete Category**
-```bash
-curl -s -X DELETE "http://localhost:6767/api/v1/categories/1"
-```
-
----
-
-## Known Issues & Gotchas
-
-These are verified issues in the current codebase:
-
-1. **`payload.NewBookResponse` dereferences `BookEntity.CategoryId` without a nil check** (`payload/BookPayload.go:41`). If a book row has a NULL `category_id`, the server will panic. Guard before mapping or ensure `category_id` is never nullable.
-2. **`helper.ParseIDParam` always returns the error message `"invalid product id"`** (`helper/response.go:50-57`) regardless of which resource (products/books/categories) uses it. Acceptable for products, but misleading for books/categories.
-3. **`config.Migrate` migrates only `ProductEntity`** (`config/config.go:78`). Books and categories tables are not auto-created on boot.
-4. **`service/book` and `service/category` constructors** (`NewBookServiceImpl`, `NewCategoryServiceImpl`) do not accept a `*gorm.DB` argument — they take a repository interface. The old `NewProductServiceImplWithDB` signature exists for backward compatibility only and ignores its first argument.
 
 ---
 
